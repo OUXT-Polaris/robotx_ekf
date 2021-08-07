@@ -33,7 +33,7 @@ add_library(ekf_component SHARED
   ekf_component.cpp
 )
 target_compile_definitions(ekf_component
-  PRIVATE "EKF_EKF_COMPONENT_BUILDING_DLL")
+  PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL")
 ament_target_dependencies(ekf_component
   rclcpp
   rclcpp_components
