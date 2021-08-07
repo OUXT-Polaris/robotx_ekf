@@ -49,7 +49,12 @@ add_executable(ekf_node src/ekf_node.cpp)
 ament_target_dependencies(ekf_node
   rclcpp
   rclcpp_components)
-  
+
+ament_export_include_dicectories(
+  include
+  ${EIGEN3_INCLUDE_DIR}
+)
+
 target_link_libraries(ekf_node ekf_component)
 
 install(TARGETS ekf_node
