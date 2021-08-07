@@ -76,7 +76,7 @@ bool EKFComponent::init()
 
 void EKFComponent::update()
 {
-  Eigen::vector10d x_hat(10);
+  Eigen::vectorXd x_hat(10);
   Eigen::MatrixXd A, B, C, Q, M, Q, K;
 
   do {
@@ -136,6 +136,7 @@ void EKFComponent::update()
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
   // 予測ステップ
   x_hat = A * x + B * u;
   P = A * P * A.transpose() + B * M * B.transpose();

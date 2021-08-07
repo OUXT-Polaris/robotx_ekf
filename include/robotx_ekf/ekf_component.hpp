@@ -57,12 +57,13 @@ extern "C" {
 #endif
 
 #include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/PoseWithCovarianceStamped>
-#include <geometry_msgs/msg/PoseStamped>
-#include <sensor_msgs/msg/Imu>
 #include <Eigen/Dense>
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 
-{
+
+namespace robotx_ekf{
   class EKFComponent : public rclcpp::Node
   {
 public:
@@ -80,10 +81,10 @@ private:
     size_t count_;
     double dt;
     bool initialized = false;
-    Eigen::Vector10d x(10);
-    Eigen::Vector10d y(10);
-    Eigen::Vector6d u(6);
-    Eigen::Matrix10d P(10, 10);
+    Eigen::VectorXd x(10);
+    Eigen::VectorXd y(10);
+    Eigen::VectorXd u(6);
+    Eigen::MatrixXd P(10, 10);
   };
 }  // namespace robotx_ekf
 
