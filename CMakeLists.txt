@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(robotx_ekf)
 
-# Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
@@ -17,17 +16,48 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
+
+target_include_directories(robotx_ekf
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> 
+    $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}> 
+    $<INSTALL_INTERFACE:include>
+)
+
+add_library(ekf_component SHARED
+  ekf_component.cpp
+)
+target_compile_definitions(ekf_component
+  PRIVATE "EKF_EKF_COMPONENT_BUILDING_DLL")
+ament_target_dependencies(ekf_component
+  rclcpp
+  rclcpp_components
+  sensor_msgs
+  geometry_msgs
+)
+rclcpp_components_register_nodes(ekf_component
+  "robotx_ekf::EKFComponent")
+
 
 add_executable(ekf_node src/ekf_node.cpp)
-target_include_directories(ekf_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+
+ament_target_dependencies(ekf_node
+  rclcpp
+  rclcpp_components)
+  
+target_link_libraries(ekf_node ekf_component)
 
 install(TARGETS ekf_node
   DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
