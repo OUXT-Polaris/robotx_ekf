@@ -70,13 +70,19 @@ public:
   explicit EKFComponent(const rclcpp::NodeOptions & options);
 
 private:
+  bool init();
   void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-  void GPStopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void update();
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
-  rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr Posepublisher_;
   size_t count_;
+  bool initialized = false;
+  Eigen::Vector10d x(10);
+  Eigen::Vector10d y(10);
+  Eigen::Vector6d u(10);
+  Eigen::Matrix10d P(10,10);
 };
 }  // namespace robotx_ekf
 
