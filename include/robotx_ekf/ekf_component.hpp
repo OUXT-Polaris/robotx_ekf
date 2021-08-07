@@ -81,7 +81,7 @@ private:
   bool initialized = false;
   Eigen::Vector10d x(10);
   Eigen::Vector10d y(10);
-  Eigen::Vector6d u(10);
+  Eigen::Vector6d u(6);
   Eigen::Matrix10d P(10,10);
 };
 }  // namespace robotx_ekf
