@@ -22,11 +22,9 @@ find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-target_include_directories(robotx_ekf
-  PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
-  $<INSTALL_INTERFACE:include>
+include_directories(
+  include
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 add_library(ekf_component SHARED
@@ -50,10 +48,6 @@ ament_target_dependencies(ekf_node
   rclcpp
   rclcpp_components)
 
-ament_export_include_dicectories(
-  include
-  ${EIGEN3_INCLUDE_DIR}
-)
 
 target_link_libraries(ekf_node ekf_component)
 
