@@ -63,28 +63,28 @@ extern "C" {
 #include <Eigen/Dense>
 
 {
-class EKFComponent : public rclcpp::Node
-{
+  class EKFComponent : public rclcpp::Node
+  {
 public:
-  ROBOTX_EKF__EKF_COMPONENT_PUBLIC
-  explicit EKFComponent(const rclcpp::NodeOptions & options);
+    ROBOTX_EKF__EKF_COMPONENT_PUBLIC
+    explicit EKFComponent(const rclcpp::NodeOptions & options);
 
 private:
-  bool init();
-  void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-  void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-  void update();
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr Posepublisher_;
-  size_t count_;
-  double dt;
-  bool initialized = false;
-  Eigen::Vector10d x(10);
-  Eigen::Vector10d y(10);
-  Eigen::Vector6d u(6);
-  Eigen::Matrix10d P(10,10);
-};
+    bool init();
+    void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+    void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+    void update();
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr Posepublisher_;
+    size_t count_;
+    double dt;
+    bool initialized = false;
+    Eigen::Vector10d x(10);
+    Eigen::Vector10d y(10);
+    Eigen::Vector6d u(6);
+    Eigen::Matrix10d P(10, 10);
+  };
 }  // namespace robotx_ekf
 
 #endif  // ROBOTX_EKF__EKF_COMPONENT_HPP_
