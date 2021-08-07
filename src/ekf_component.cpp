@@ -65,6 +65,7 @@ bool EKFComponent::init()
         0,0,0,0,0,0,0,1,0,0,
         0,0,0,0,0,0,0,0,1,0,
         0,0,0,0,0,0,0,0,0,1;
+  dt = 0.01;
   return initialized = true ;
 }
 

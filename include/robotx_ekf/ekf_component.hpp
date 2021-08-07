@@ -78,6 +78,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr Posepublisher_;
   size_t count_;
+  double dt;
   bool initialized = false;
   Eigen::Vector10d x(10);
   Eigen::Vector10d y(10);
