@@ -21,13 +21,21 @@ namespace robotx_ekf
 {
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 : Node("robotx_ekf", options)
-{ 
-  Eigen::MatrixXd P = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(10); 
-  Eigen::VectorXd y = Eigen::VectorXd::Zero(10); 
-  Eigen::VectorXd u = Eigen::VectorXd::Zero(6); 
-  
-  
+{
+  Eigen::MatrixXd P = Eigen::MatrixXd::Zero(10, 10);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(10);
+  Eigen::VectorXd y = Eigen::VectorXd::Zero(10);
+  Eigen::VectorXd u = Eigen::VectorXd::Zero(6);
+  Eigen::MatrixXd I = Eigen::MatrixXd::Identity(10, 10);
+  Eigen::MatrixXd A = Eigen::VectorXd::Zero(10, 10);
+  Eigen::MatrixXd B = Eigen::VectorXd::Zero(10, 10);
+  Eigen::MatrixXd C = Eigen::VectorXd::Zero(10, 10);
+  Eigen::MatrixXd M = Eigen::VectorXd::Zero(6, 6);
+  Eigen::MatrixXd Q = Eigen::VectorXd::Zero(10, 10);
+  Eigen::MatrixXd K = Eigen::VectorXd::Zero(6);
+  Eigen::VectorXd x_hat = Eigen::VectorXd::Zero(6);
+
+
   GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "GPS_Topic", 10,
     std::bind(
@@ -43,7 +51,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 
 void EKFComponent::GPStopic_callback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
-{ 
+{
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
   y(2) = msg->pose.pose.position.z;
@@ -79,22 +87,9 @@ bool EKFComponent::init()
 void EKFComponent::update()
 {
   do {
-    GPStopic_callback(geometry_msgs::msg::PoseWithCovarianceStamped msg);
-
     init();
   } while (!initialized);
 
-  GPStopic_callback(geometry_msgs::msg::PoseWithCovarianceStamped msg); 
-  IMUtopic_callback(sensor_msgs::msg::Imu msg); 
-
-  Eigen::MatrixXd I = Eigen::MatrixXd::Identity(10, 10);
-  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd B = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd M = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(10, 10);
-  Eigen::MatrixXd K = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::VectorXd x_hat = Eigen::VectorXd::Zero(10); 
 
   A << 1, 0, 0, dt, 0, 0, 0, 0, 0, 0,
     0, 1, 0, 0, dt, 0, 0, 0, 0, 0,
@@ -118,9 +113,11 @@ void EKFComponent::update()
   B << 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0,
-  (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)) * dt, 2 * (x(7) * x(8) - x(6) * x(9)) * dt,
+  (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)) * dt,
+    2 * (x(7) * x(8) - x(6) * x(9)) * dt,
     2 * (x(7) * x(9) + x(6) * x(8)) * dt, 0, 0, 0,
-    2 * (x(7) * x(8) - x(6) * x(9)) * dt, (x(6) * x(6) - x(7) * x(7) + x(8) * x(8) - x(9) * x(9)) * dt,
+    2 * (x(7) * x(8) - x(6) * x(9)) * dt,
+  (x(6) * x(6) - x(7) * x(7) + x(8) * x(8) - x(9) * x(9)) * dt,
     2 * (x(8) * x(9) + x(6) * x(7)) * dt, 0, 0, 0,
     2 * (x(7) * x(9) + x(6) * x(8)) * dt, 2 * (x(8) * x(9) - x(6) * x(7)) * dt,
   (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)) * dt, 0, 0, 0,

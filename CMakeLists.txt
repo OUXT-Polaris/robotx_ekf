@@ -43,12 +43,7 @@ target_link_libraries(ekf_node ekf_component Eigen3::Eigen)
 
 ament_target_dependencies(ekf_node rclcpp rclcpp_components)
 
-
-
-
 install(TARGETS ekf_node DESTINATION lib/${PROJECT_NAME})
-
-install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
