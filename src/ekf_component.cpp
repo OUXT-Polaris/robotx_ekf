@@ -27,6 +27,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   Eigen::VectorXd y = Eigen::VectorXd::Zero(10); 
   Eigen::VectorXd u = Eigen::VectorXd::Zero(6); 
   
+  
   GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "GPS_Topic", 10,
     std::bind(
@@ -41,15 +42,15 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 }
 
 void EKFComponent::GPStopic_callback(
-  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) const
-{
+  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
+{ 
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
   y(2) = msg->pose.pose.position.z;
 }
 
 void EKFComponent::IMUtopic_callback(
-  const sensor_msgs::msg::Imu::SharedPtr msg) const
+  const sensor_msgs::msg::Imu::SharedPtr msg)
 {
   u(0) = msg->linear_acceleration.x;
   u(1) = msg->linear_acceleration.y;
@@ -59,7 +60,7 @@ void EKFComponent::IMUtopic_callback(
   u(5) = msg->angular_velocity.z;
 }
 
-bool EKFComponent::init(Eigen::VectorXd& x, Eigen::MatrixXd& P)
+bool EKFComponent::init()
 {
   x << y(1), y(2), y(3), 0, 0, 0, 1, 0, 0, 0;
   P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -75,12 +76,12 @@ bool EKFComponent::init(Eigen::VectorXd& x, Eigen::MatrixXd& P)
   return initialized = true;
 }
 
-void EKFComponent::update(Eigen::VectorXd& x, Eigen::MatrixXd& P, Eigen::VectorXd& y, Eigen::VectorXd& u)
+void EKFComponent::update()
 {
   do {
     GPStopic_callback(geometry_msgs::msg::PoseWithCovarianceStamped msg);
 
-    init( x, P);
+    init();
   } while (!initialized);
 
   GPStopic_callback(geometry_msgs::msg::PoseWithCovarianceStamped msg); 
