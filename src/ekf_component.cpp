@@ -22,15 +22,8 @@ namespace robotx_ekf
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 : Node("robotx_ekf", options)
 { 
-  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd B = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd M = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(10, 10); 
   Eigen::MatrixXd P = Eigen::MatrixXd::Zero(10, 10); 
-  Eigen::MatrixXd I = Eigen::MatrixXd::Identity(10, 10);
   Eigen::VectorXd x = Eigen::VectorXd::Zero(10); 
-  Eigen::VectorXd x_hat = Eigen::VectorXd::Zero(10); 
   Eigen::VectorXd y = Eigen::VectorXd::Zero(10); 
   Eigen::VectorXd u = Eigen::VectorXd::Zero(6); 
   
@@ -46,6 +39,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 
   Posepublisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("Pub_Pose", 10);
 }
+
 void EKFComponent::GPStopic_callback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) const
 {
@@ -65,7 +59,7 @@ void EKFComponent::IMUtopic_callback(
   u(5) = msg->angular_velocity.z;
 }
 
-bool EKFComponent::init()
+bool EKFComponent::init(Eigen::VectorXd& x, Eigen::MatrixXd& P)
 {
   x << y(1), y(2), y(3), 0, 0, 0, 1, 0, 0, 0;
   P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -78,23 +72,29 @@ bool EKFComponent::init()
     0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
-  dt = 0.01;
   return initialized = true;
 }
 
-void EKFComponent::update()
+void EKFComponent::update(Eigen::VectorXd& x, Eigen::MatrixXd& P, Eigen::VectorXd& y, Eigen::VectorXd& u)
 {
   do {
-    EKFComponent::GPStopic_callback(
-      geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+    GPStopic_callback(geometry_msgs::msg::PoseWithCovarianceStamped msg);
 
-    EKFComponent::init();
+    init( x, P);
   } while (!initialized);
 
-  GPStopic_callback(
-    geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-  IMUtopic_callback(
-    sensor_msgs::msg::Imu::SharedPtr IMUmsg);
+  GPStopic_callback(geometry_msgs::msg::PoseWithCovarianceStamped msg); 
+  IMUtopic_callback(sensor_msgs::msg::Imu msg); 
+
+  Eigen::MatrixXd I = Eigen::MatrixXd::Identity(10, 10);
+  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(10, 10); 
+  Eigen::MatrixXd B = Eigen::MatrixXd::Zero(10, 10); 
+  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(10, 10); 
+  Eigen::MatrixXd M = Eigen::MatrixXd::Zero(10, 10); 
+  Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(10, 10);
+  Eigen::MatrixXd K = Eigen::MatrixXd::Zero(10, 10); 
+  Eigen::VectorXd x_hat = Eigen::VectorXd::Zero(10); 
+
   A << 1, 0, 0, dt, 0, 0, 0, 0, 0, 0,
     0, 1, 0, 0, dt, 0, 0, 0, 0, 0,
     0, 0, 1, 0, 0, dt, 0, 0, 0, 0,
@@ -117,12 +117,12 @@ void EKFComponent::update()
   B << 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0,
-  (x(6) ^ 2 + x(7) ^ 2 - x(8) ^ 2 - x(9) ^ 2) * dt, 2 (x(7) * x(8) - x(6) * x(9)) * dt,
-    2 (x(7) * x(9) + x(6) * x(8)) * dt, 0, 0, 0,
-    2 (x(7) * x(8) - x(6) * x(9)) * dt, (x(6) ^ 2 - x(7) ^ 2 + x(8) ^ 2 - x(9) ^ 2) * dt,
-    2 (x(8) * x(9) + x(6) * x(7)) * dt, 0, 0, 0,
-    2 (x(7) * x(9) + x(6) * x(8)) * dt, 2 (x(8) * x(9) - x(6) * x(7)) * dt,
-  (x(6) ^ 2 + x(7) ^ 2 - x(8) ^ 2 - x(9) ^ 2) * dt, 0, 0, 0,
+  (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)) * dt, 2 * (x(7) * x(8) - x(6) * x(9)) * dt,
+    2 * (x(7) * x(9) + x(6) * x(8)) * dt, 0, 0, 0,
+    2 * (x(7) * x(8) - x(6) * x(9)) * dt, (x(6) * x(6) - x(7) * x(7) + x(8) * x(8) - x(9) * x(9)) * dt,
+    2 * (x(8) * x(9) + x(6) * x(7)) * dt, 0, 0, 0,
+    2 * (x(7) * x(9) + x(6) * x(8)) * dt, 2 * (x(8) * x(9) - x(6) * x(7)) * dt,
+  (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)) * dt, 0, 0, 0,
     0, 0, 0, -x(7), x(8), -x(9),
     0, 0, 0, 1 + x(6), -x(9), x(8),
     0, 0, 0, x(9), 1 + x(6), -x(7),

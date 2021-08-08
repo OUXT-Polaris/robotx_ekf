@@ -72,14 +72,14 @@ public:
     explicit EKFComponent(const rclcpp::NodeOptions & options);
 
 private:
-    bool init();
+    bool init(Eigen::VectorXd& x, Eigen::MatrixXd& P);
     void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) const;
     void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg) const;
-    void update(); 
+    void update(Eigen::VectorXd& x, Eigen::MatrixXd& P, Eigen::VectorXd& y, Eigen::VectorXd& u); 
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr Posepublisher_; 
-    double dt; 
+    double dt = 0.01; 
     bool initialized; 
   }; 
 }  // namespace robotx_ekf
