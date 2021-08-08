@@ -33,25 +33,17 @@ include_directories(include ${EIGEN3_INCLUDE_DIR})
 
 add_library(ekf_component SHARED src/ekf_component.cpp)
 
-target_link_libraries(ekf_node ekf_component)
-
 target_compile_definitions(ekf_component PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL")
 ament_target_dependencies(ekf_component rclcpp rclcpp_components sensor_msgs geometry_msgs)
 rclcpp_components_register_nodes(ekf_component "robotx_ekf::EKFComponent")
 
-
 add_executable(ekf_node src/ekf_node.cpp)
 
-ament_target_dependencies(ekf_node
-  rclcpp
-  rclcpp_components)
+target_link_libraries(ekf_node ekf_component Eigen3::Eigen)
 
-
-
+ament_target_dependencies(ekf_node rclcpp rclcpp_components)
 
 install(TARGETS ekf_node DESTINATION lib/${PROJECT_NAME})
-
-install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
