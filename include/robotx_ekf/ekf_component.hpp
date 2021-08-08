@@ -56,35 +56,46 @@ extern "C" {
 }  // extern "C"
 #endif
 
-#include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/PoseWithCovarianceStamped>
-#include <geometry_msgs/msg/PoseStamped>
-#include <sensor_msgs/msg/Imu>
-#include <Eigen/Dense>
 
+#include <rclcpp/rclcpp.hpp>
+#include <Eigen/Dense>
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+
+
+namespace robotx_ekf
 {
-  class EKFComponent : public rclcpp::Node
-  {
+class EKFComponent : public rclcpp::Node
+{
 public:
-    ROBOTX_EKF__EKF_COMPONENT_PUBLIC
-    explicit EKFComponent(const rclcpp::NodeOptions & options);
+  ROBOTX_EKF__EKF_COMPONENT_PUBLIC
+  explicit EKFComponent(const rclcpp::NodeOptions & options);
+
+  double dt = 0.01;
+  bool initialized;
+  Eigen::MatrixXd P;
+  Eigen::VectorXd x;
+  Eigen::VectorXd y;
+  Eigen::VectorXd u;
+  Eigen::MatrixXd I;
+  Eigen::MatrixXd A;
+  Eigen::MatrixXd B;
+  Eigen::MatrixXd C;
+  Eigen::MatrixXd M;
+  Eigen::MatrixXd Q;
+  Eigen::MatrixXd K;
+  Eigen::VectorXd x_hat;
 
 private:
-    bool init();
-    void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-    void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-    void update();
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr Posepublisher_;
-    size_t count_;
-    double dt;
-    bool initialized = false;
-    Eigen::Vector10d x(10);
-    Eigen::Vector10d y(10);
-    Eigen::Vector6d u(6);
-    Eigen::Matrix10d P(10, 10);
-  };
+  bool init();
+  void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+  void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void update();
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr Posepublisher_;
+};
 }  // namespace robotx_ekf
 
 #endif  // ROBOTX_EKF__EKF_COMPONENT_HPP_
