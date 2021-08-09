@@ -22,19 +22,19 @@ namespace robotx_ekf
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 : Node("robotx_ekf", options)
 {
-  A = Eigen::MatrixXd::Zero(10, 10);
-  B = Eigen::MatrixXd::Zero(10, 6);
-  C = Eigen::MatrixXd::Zero(10, 10);
-  M = Eigen::MatrixXd::Zero(6, 6);
-  Q = Eigen::MatrixXd::Zero(10, 10);
-  K = Eigen::MatrixXd::Zero(10, 10);
-  P = Eigen::MatrixXd::Zero(10, 10);
-  I = Eigen::MatrixXd::Identity(10, 10);
+  A = Eigen::MatrixXd::Zero(10, 10); 
+  B = Eigen::MatrixXd::Zero(10, 6); 
+  C = Eigen::MatrixXd::Zero(10, 10); 
+  M = Eigen::MatrixXd::Zero(6, 6); 
+  Q = Eigen::MatrixXd::Zero(10, 10); 
+  K = Eigen::MatrixXd::Zero(10, 10); 
+  P = Eigen::MatrixXd::Zero(10, 10); 
+  I = Eigen::MatrixXd::Identity(10, 10); 
 
-  x = Eigen::VectorXd::Zero(10);
-  y = Eigen::VectorXd::Zero(10);
-  u = Eigen::VectorXd::Zero(6);
-  x_hat = Eigen::VectorXd::Zero(6);
+  x = Eigen::VectorXd::Zero(10); 
+  y = Eigen::VectorXd::Zero(10); 
+  u = Eigen::VectorXd::Zero(6); 
+  x_hat = Eigen::VectorXd::Zero(6); 
 
 
   GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
