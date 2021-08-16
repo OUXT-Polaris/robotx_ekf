@@ -37,7 +37,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   x_hat = Eigen::VectorXd::Zero(6);
 
 
-  GPSsubscription_ = this->create_subscription<nav_msgs::msg::odometry>(
+  GPSsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "/odom", 10,
     std::bind(
       &EKFComponent::GPStopic_callback, this, std::placeholders::_1));
@@ -51,7 +51,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 }
 
 void EKFComponent::GPStopic_callback(
-  const nav_msgs::msg::odometry::SharedPtr msg)
+  const nav_msgs::msg::Odometry::SharedPtr msg)
 {
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;

@@ -25,6 +25,7 @@ ament_auto_find_build_dependencies()
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
+find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -34,7 +35,7 @@ include_directories(include ${EIGEN3_INCLUDE_DIR})
 add_library(ekf_component SHARED src/ekf_component.cpp)
 
 target_compile_definitions(ekf_component PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL")
-ament_target_dependencies(ekf_component rclcpp rclcpp_components sensor_msgs geometry_msgs)
+ament_target_dependencies(ekf_component rclcpp rclcpp_components nav_msgs sensor_msgs geometry_msgs)
 rclcpp_components_register_nodes(ekf_component "robotx_ekf::EKFComponent")
 
 add_executable(ekf_node src/ekf_node.cpp)

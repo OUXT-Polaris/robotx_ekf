@@ -89,10 +89,10 @@ public:
 
 private:
   bool init();
-  void GPStopic_callback(const nav_msgs::msg::odometry::SharedPtr msg);
+  void GPStopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void update();
-  rclcpp::Subscription<nav_msgs::msg::odometry>::SharedPtr GPSsubscription_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr GPSsubscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr Posepublisher_;
 };
