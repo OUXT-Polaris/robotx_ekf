@@ -37,13 +37,13 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   x_hat = Eigen::VectorXd::Zero(6);
 
 
-  GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "GPS_Topic", 10,
+  GPSsubscription_ = this->create_subscription<nav_msgs::msg::odometry>(
+    "/odom", 10,
     std::bind(
       &EKFComponent::GPStopic_callback, this, std::placeholders::_1));
 
   IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
-    "IMU_Topic", 10,
+    "/imu", 10,
     std::bind(
       &EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
@@ -51,7 +51,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 }
 
 void EKFComponent::GPStopic_callback(
-  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
+  const nav_msgs::msg::odometry::SharedPtr msg)
 {
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;

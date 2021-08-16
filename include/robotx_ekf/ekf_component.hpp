@@ -59,7 +59,7 @@ extern "C" {
 
 #include <rclcpp/rclcpp.hpp>
 #include <Eigen/Dense>
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
@@ -89,10 +89,10 @@ public:
 
 private:
   bool init();
-  void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+  void GPStopic_callback(const nav_msgs::msg::odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void update();
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
+  rclcpp::Subscription<nav_msgs::msg::odometry>::SharedPtr GPSsubscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr Posepublisher_;
 };
