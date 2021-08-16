@@ -19,9 +19,6 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_auto REQUIRED)
-
-ament_auto_find_build_dependencies()
-
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
@@ -37,6 +34,7 @@ add_library(ekf_component SHARED src/ekf_component.cpp)
 target_compile_definitions(ekf_component PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL")
 ament_target_dependencies(ekf_component rclcpp rclcpp_components nav_msgs sensor_msgs geometry_msgs)
 rclcpp_components_register_nodes(ekf_component "robotx_ekf::EKFComponent")
+ament_export_libraries(ekf_component)
 
 add_executable(ekf_node src/ekf_node.cpp)
 
@@ -45,6 +43,15 @@ target_link_libraries(ekf_node ekf_component Eigen3::Eigen)
 ament_target_dependencies(ekf_node rclcpp rclcpp_components)
 
 install(TARGETS ekf_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS ekf_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
+
+install(
+  DIRECTORY "include/"
+  DESTINATION include
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -57,4 +64,5 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+ament_export_include_directories(include)
 ament_package()
