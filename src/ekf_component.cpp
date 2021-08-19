@@ -36,7 +36,6 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   u = Eigen::VectorXd::Zero(6);
   x_hat = Eigen::VectorXd::Zero(6);
 
-
   GPSsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "/odom", 10,
     std::bind(
@@ -47,20 +46,32 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
     std::bind(
       &EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
-  Posepublisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("Pub_Pose", 10);
+  Posepublisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/estimated_pose", 10);
 }
 
 void EKFComponent::GPStopic_callback(
   const nav_msgs::msg::Odometry::SharedPtr msg)
 {
+  gpstimestamp = msg->header.stamp;
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
   y(2) = msg->pose.pose.position.z;
+  std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+  std::cout << "Receive GPS DATA" << std::endl;
+  std::cout << "=============================" << std::endl;
+  std::cout << "ts: " << std::endl;
+  std::cout << "x: " << y(0) << std::endl;
+  std::cout << "y: " << y(1) << std::endl;
+  std::cout << "z: " << y(2) << std::endl;
+
+  init();
+  update();
 }
 
 void EKFComponent::IMUtopic_callback(
   const sensor_msgs::msg::Imu::SharedPtr msg)
 {
+  imutimestamp = msg->header.stamp;
   u(0) = msg->linear_acceleration.x;
   u(1) = msg->linear_acceleration.y;
   u(2) = msg->linear_acceleration.z;
@@ -71,26 +82,25 @@ void EKFComponent::IMUtopic_callback(
 
 bool EKFComponent::init()
 {
-  x << y(1), y(2), y(3), 0, 0, 0, 1, 0, 0, 0;
-  P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+  if (!initialized) {
+    x << y(1), y(2), y(3), 0, 0, 0, 1, 0, 0, 0;
+    P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+  }
   return initialized = true;
 }
 
 void EKFComponent::update()
 {
-  do {
-    init();
-  } while (!initialized);
-
+  if (!initialized) {std::cout << "NOT Initialized" << std::endl;}
 
   A << 1, 0, 0, dt, 0, 0, 0, 0, 0, 0,
     0, 1, 0, 0, dt, 0, 0, 0, 0, 0,
@@ -136,22 +146,22 @@ void EKFComponent::update()
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-  M << 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0;
-  Q << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+  M << 1, 0, 0, 0, 0, 0,
+    0, 1, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0,
+    0, 0, 0, 1, 0, 0,
+    0, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 0, 1;
+  Q << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
 
   // 予測ステップ
   x_hat = A * x + B * u;
@@ -162,14 +172,18 @@ void EKFComponent::update()
   P = (I - K * C) * P;
   x = x_hat;
 
-  auto pose_ekf = geometry_msgs::msg::PoseStamped();
+  geometry_msgs::msg::PoseStamped pose_ekf{};
+  pose_ekf.header.stamp = imutimestamp;
   pose_ekf.pose.position.x = x(0);
   pose_ekf.pose.position.y = x(1);
   pose_ekf.pose.position.z = x(2);
-  pose_ekf.pose.orientation.w = x(6);
-  pose_ekf.pose.orientation.x = x(7);
-  pose_ekf.pose.orientation.y = x(8);
-  pose_ekf.pose.orientation.z = x(9);
+  std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+  std::cout << "Publish Pose DATA" << std::endl;
+  std::cout << "=============================" << std::endl;
+  std::cout << "ts: " << std::endl;
+  std::cout << "x: " << x(0) << std::endl;
+  std::cout << "y: " << x(1) << std::endl;
+  std::cout << "z: " << x(2) << std::endl;
 
   Posepublisher_->publish(pose_ekf);
 }

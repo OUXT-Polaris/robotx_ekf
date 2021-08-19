@@ -58,7 +58,9 @@ extern "C" {
 
 
 #include <rclcpp/rclcpp.hpp>
+
 #include <Eigen/Dense>
+#include <iostream>
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "sensor_msgs/msg/imu.hpp"
@@ -87,10 +89,14 @@ public:
   Eigen::MatrixXd K;
   Eigen::VectorXd x_hat;
 
+  rclcpp::Time gpstimestamp;
+  rclcpp::Time imutimestamp;
+  rclcpp::Time posetimestamp;
+
 private:
-  bool init();
   void GPStopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  bool init();
   void update();
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr GPSsubscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
