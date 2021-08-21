@@ -174,6 +174,7 @@ void EKFComponent::update()
 
   geometry_msgs::msg::PoseStamped pose_ekf{};
   pose_ekf.header.stamp = imutimestamp;
+  pose_ekf.header.frame_id = "/map";
   pose_ekf.pose.position.x = x(0);
   pose_ekf.pose.position.y = x(1);
   pose_ekf.pose.position.z = x(2);
