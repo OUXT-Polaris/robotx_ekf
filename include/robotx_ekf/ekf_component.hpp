@@ -93,8 +93,6 @@ public:
   rclcpp::Time imutimestamp;
   rclcpp::Time posetimestamp;
 
-  
-
 private:
   void GPStopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
