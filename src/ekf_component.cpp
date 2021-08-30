@@ -46,7 +46,8 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
     std::bind(
       &EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
-  Posepublisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/estimated_pose", 10);
+  Posepublisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    "/estimated_pose", 10);
 }
 
 void EKFComponent::GPStopic_callback(
@@ -172,12 +173,18 @@ void EKFComponent::update()
   P = (I - K * C) * P;
   x = x_hat;
 
-  geometry_msgs::msg::PoseStamped pose_ekf{};
+  geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf{};
   pose_ekf.header.stamp = imutimestamp;
   pose_ekf.header.frame_id = "/map";
-  pose_ekf.pose.position.x = x(0);
-  pose_ekf.pose.position.y = x(1);
-  pose_ekf.pose.position.z = x(2);
+  pose_ekf.pose.pose.position.x = x(0);
+  pose_ekf.pose.pose.position.y = x(1);
+  pose_ekf.pose.pose.position.z = x(2);
+  pose_ekf.pose.covariance = {P(0, 0), P(0, 1), P(0, 2), P(0, 7), P(0, 8), P(0, 9),
+    P(1, 0), P(1, 1), P(1, 2), P(1, 7), P(1, 8), P(1, 9),
+    P(2, 0), P(2, 1), P(2, 2), P(2, 7), P(2, 8), P(2, 9),
+    P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9),
+    P(8, 0), P(8, 1), P(8, 2), P(8, 7), P(8, 8), P(8, 9),
+    P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
   std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
   std::cout << "Publish Pose DATA" << std::endl;
   std::cout << "=============================" << std::endl;

@@ -62,7 +62,7 @@ extern "C" {
 #include <Eigen/Dense>
 #include <iostream>
 #include "nav_msgs/msg/odometry.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
 
@@ -93,6 +93,8 @@ public:
   rclcpp::Time imutimestamp;
   rclcpp::Time posetimestamp;
 
+  
+
 private:
   void GPStopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
@@ -100,7 +102,7 @@ private:
   void update();
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr GPSsubscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr Posepublisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr Posepublisher_;
 };
 }  // namespace robotx_ekf
 
