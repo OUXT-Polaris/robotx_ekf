@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <robotx_ekf/ekf_component.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <memory>
+#include <rclcpp/rclcpp.hpp>
+#include <robotx_ekf/ekf_component.hpp>
 
 int main(int argc, char * argv[])
 {
