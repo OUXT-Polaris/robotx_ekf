@@ -1,1 +1,5 @@
 repositories:
+  ouxt_common:
+    url: https://github.com/OUXT-Polaris/ouxt_common.git
+    type: git
+    version: master

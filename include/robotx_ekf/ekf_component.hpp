@@ -22,49 +22,44 @@ extern "C" {
 // The below macros are taken from https://gcc.gnu.org/wiki/Visibility and from
 // demos/composition/include/composition/visibility_control.h at https://github.com/ros2/demos
 #if defined _WIN32 || defined __CYGWIN__
-    #ifdef __GNUC__
-        #define ROBOTX_EKF__EKF_COMPONENT_EXPORT __attribute__ ((dllexport))
-        #define ROBOTX_EKF__EKF_COMPONENT_IMPORT __attribute__ ((dllimport))
-    #else
-        #define ROBOTX_EKF__EKF_COMPONENT_EXPORT __declspec(dllexport)
-        #define ROBOTX_EKF__EKF_COMPONENT_IMPORT __declspec(dllimport)
-    #endif
-    #ifdef ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL
-        #define ROBOTX_EKF__EKF_COMPONENT_PUBLIC \
-  ROBOTX_EKF__EKF_COMPONENT_EXPORT
-    #else
-        #define JOY_TO_TWIST_JOY_TO_TWIST_COMPONENT_PUBLIC \
-  ROBOTX_EKF__EKF_COMPONENT_IMPORT
-    #endif
-        #define ROBOTX_EKF__EKF_COMPONENT_PUBLIC_TYPE \
-  ROBOTX_EKF__EKF_COMPONENT_PUBLIC
-        #define JOY_TO_TWIST_JOY_TO_TWIST_COMPONENT_LOCAL
+#ifdef __GNUC__
+#define ROBOTX_EKF__EKF_COMPONENT_EXPORT __attribute__((dllexport))
+#define ROBOTX_EKF__EKF_COMPONENT_IMPORT __attribute__((dllimport))
 #else
-    #define ROBOTX_EKF__EKF_COMPONENT_EXPORT __attribute__ ((visibility("default")))
-    #define ROBOTX_EKF__EKF_COMPONENT_IMPORT
-    #if __GNUC__ >= 4
-        #define ROBOTX_EKF__EKF_COMPONENT_PUBLIC __attribute__ ((visibility("default")))
-        #define ROBOTX_EKF__EKF_COMPONENT_LOCAL  __attribute__ ((visibility("hidden")))
-    #else
-        #define ROBOTX_EKF__EKF_COMPONENT_PUBLIC
-        #define ROBOTX_EKF__EKF_COMPONENT_LOCAL
-    #endif
-    #define ROBOTX_EKF__EKF_COMPONENT_PUBLIC_TYPE
+#define ROBOTX_EKF__EKF_COMPONENT_EXPORT __declspec(dllexport)
+#define ROBOTX_EKF__EKF_COMPONENT_IMPORT __declspec(dllimport)
+#endif
+#ifdef ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL
+#define ROBOTX_EKF__EKF_COMPONENT_PUBLIC ROBOTX_EKF__EKF_COMPONENT_EXPORT
+#else
+#define JOY_TO_TWIST_JOY_TO_TWIST_COMPONENT_PUBLIC ROBOTX_EKF__EKF_COMPONENT_IMPORT
+#endif
+#define ROBOTX_EKF__EKF_COMPONENT_PUBLIC_TYPE ROBOTX_EKF__EKF_COMPONENT_PUBLIC
+#define JOY_TO_TWIST_JOY_TO_TWIST_COMPONENT_LOCAL
+#else
+#define ROBOTX_EKF__EKF_COMPONENT_EXPORT __attribute__((visibility("default")))
+#define ROBOTX_EKF__EKF_COMPONENT_IMPORT
+#if __GNUC__ >= 4
+#define ROBOTX_EKF__EKF_COMPONENT_PUBLIC __attribute__((visibility("default")))
+#define ROBOTX_EKF__EKF_COMPONENT_LOCAL __attribute__((visibility("hidden")))
+#else
+#define ROBOTX_EKF__EKF_COMPONENT_PUBLIC
+#define ROBOTX_EKF__EKF_COMPONENT_LOCAL
+#endif
+#define ROBOTX_EKF__EKF_COMPONENT_PUBLIC_TYPE
 #endif
 
 #if __cplusplus
 }  // extern "C"
 #endif
 
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <Eigen/Dense>
 #include <iostream>
-#include "nav_msgs/msg/odometry.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
-#include "sensor_msgs/msg/imu.hpp"
+#include <rclcpp/rclcpp.hpp>
 
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 
 namespace robotx_ekf
 {
