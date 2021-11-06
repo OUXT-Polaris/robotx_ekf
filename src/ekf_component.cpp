@@ -19,6 +19,11 @@ namespace robotx_ekf
 {
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf", options)
 {
+  declare_parameter("recieve_odom", false);
+  get_parameter("recieve_odom", recieve_odom_);
+  declare_parameter("recieve_pose", true);
+  get_parameter("recieve_pose", recieve_pose_);
+
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
   C = Eigen::MatrixXd::Zero(10, 10);
@@ -32,9 +37,17 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   y = Eigen::VectorXd::Zero(10);
   u = Eigen::VectorXd::Zero(6);
   x_hat = Eigen::VectorXd::Zero(6);
+  cov = Eigen::VectorXd::Zero(36);
 
-  GPSsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "/odom", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+  if (recieve_odom_) {
+    Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
+      "/odom_pose", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
+  } else if (recieve_pose_) {
+    GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+      "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+  } else {
+    std::cout << "[ERROR]: plz, check parameter recieve_odom_ & recieve_pose_" << std::endl;
+  }
 
   IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
     "/imu", 10, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
@@ -43,21 +56,30 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
 }
 
-void EKFComponent::GPStopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+void EKFComponent::GPStopic_callback(
+  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
+  init();
   gpstimestamp = msg->header.stamp;
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
   y(2) = msg->pose.pose.position.z;
-  std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-  std::cout << "Receive GPS DATA" << std::endl;
-  std::cout << "=============================" << std::endl;
-  std::cout << "ts: " << std::endl;
-  std::cout << "x: " << y(0) << std::endl;
-  std::cout << "y: " << y(1) << std::endl;
-  std::cout << "z: " << y(2) << std::endl;
+  for (int i; i < 36; i++) {
+    cov(i) = msg->pose.covariance[i];
+  }
+  update();
+}
 
+void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
+{
   init();
+  odomtimestamp = msg->header.stamp;
+  y(0) = msg->pose.pose.position.x;
+  y(1) = msg->pose.pose.position.y;
+  y(2) = msg->pose.pose.position.z;
+  for (int i = 0; i < 36; i++) {
+    cov(i) = msg->pose.covariance[i];
+  }
   update();
 }
 
@@ -121,10 +143,13 @@ void EKFComponent::update()
     0, 0, 0, 0, 0;
   M << 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 1;
-  Q << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+
+  Q << cov[0], cov[1], cov[2], 0, 0, 0, 0, cov[3], cov[4], cov[5], cov[6], cov[7], cov[8], 0, 0, 0,
+    0, cov[9], cov[10], cov[11], cov[12], cov[13], cov[14], 0, 0, 0, 0, cov[15], cov[16], cov[17],
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1;
+    0, 0, 0, 0, 1, 0, 0, 0, cov[18], cov[19], cov[20], 0, 0, 0, 0, cov[21], cov[22], cov[23],
+    cov[24], cov[25], cov[26], 0, 0, 0, 0, cov[27], cov[28], cov[29], cov[30], cov[31], cov[32], 0,
+    0, 0, 0, cov[33], cov[34], cov[35];
 
   // 予測ステップ
   x_hat = A * x + B * u;
@@ -136,7 +161,12 @@ void EKFComponent::update()
   x = x_hat;
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf{};
-  pose_ekf.header.stamp = imutimestamp;
+  if (recieve_odom_) {
+    pose_ekf.header.stamp = odomtimestamp;
+  }
+  if (recieve_pose_) {
+    pose_ekf.header.stamp = gpstimestamp;
+  }
   pose_ekf.header.frame_id = "/map";
   pose_ekf.pose.pose.position.x = x(0);
   pose_ekf.pose.pose.position.y = x(1);
@@ -146,14 +176,6 @@ void EKFComponent::update()
     P(1, 7), P(1, 8), P(1, 9), P(2, 0), P(2, 1), P(2, 2), P(2, 7), P(2, 8), P(2, 9),
     P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
     P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
-  std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-  std::cout << "Publish Pose DATA" << std::endl;
-  std::cout << "=============================" << std::endl;
-  std::cout << "ts: " << std::endl;
-  std::cout << "x: " << x(0) << std::endl;
-  std::cout << "y: " << x(1) << std::endl;
-  std::cout << "z: " << x(2) << std::endl;
-
   Posepublisher_->publish(pose_ekf);
 }
 }  // namespace robotx_ekf
