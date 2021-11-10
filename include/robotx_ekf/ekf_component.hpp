@@ -54,12 +54,12 @@ extern "C" {
 #endif
 
 #include <Eigen/Dense>
-#include <rclcpp/rclcpp.hpp>
 #include <iostream>
+#include <rclcpp/rclcpp.hpp>
 
-#include "sensor_msgs/msg/imu.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 
 namespace robotx_ekf
 {
