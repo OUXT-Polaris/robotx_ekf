@@ -82,7 +82,7 @@ public:
   Eigen::MatrixXd M;
   Eigen::MatrixXd Q;
   Eigen::MatrixXd K;
-  Eigen::VectorXd x_hat;
+  Eigen::MatrixXd S;
   Eigen::VectorXd cov;
 
   rclcpp::Time odomtimestamp;
@@ -90,11 +90,12 @@ public:
   rclcpp::Time imutimestamp;
 
 private:
-  bool recieve_odom_;
-  bool recieve_pose_;
+  bool receive_odom_;
+  bool receive_pose_;
   void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void modelfunc();
   bool init();
   void update();
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;

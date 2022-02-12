@@ -1,0 +1,40 @@
+[0.051s] Invoking command in '/home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kenta/ouxt_automation/robotx_ws/install/rosboard:/home/kenta/ouxt_automation/robotx_ws/install/rospy2:/home/kenta/ouxt_automation/robotx_ws/install/ros2controlcli:/opt/ros/galactic /usr/bin/cmake --build /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf -- -j12 -l12
+[0.069s] [35m[1mScanning dependencies of target ekf_component[0m
+[0.107s] [ 25%] [32mBuilding CXX object CMakeFiles/ekf_component.dir/src/ekf_component.cpp.o[0m
+[11.876s] [ 50%] [32m[1mLinking CXX shared library libekf_component.so[0m
+[12.356s] [ 50%] Built target ekf_component
+[12.382s] [35m[1mScanning dependencies of target ekf_node[0m
+[12.420s] [ 75%] [32mBuilding CXX object CMakeFiles/ekf_node.dir/src/ekf_node.cpp.o[0m
+[14.779s] [100%] [32m[1mLinking CXX executable ekf_node[0m
+[14.982s] [100%] Built target ekf_node
+[14.997s] Invoked command in '/home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kenta/ouxt_automation/robotx_ws/install/rosboard:/home/kenta/ouxt_automation/robotx_ws/install/rospy2:/home/kenta/ouxt_automation/robotx_ws/install/ros2controlcli:/opt/ros/galactic /usr/bin/cmake --build /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf -- -j12 -l12
+[15.073s] Invoking command in '/home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kenta/ouxt_automation/robotx_ws/install/rosboard:/home/kenta/ouxt_automation/robotx_ws/install/rospy2:/home/kenta/ouxt_automation/robotx_ws/install/ros2controlcli:/opt/ros/galactic /usr/bin/cmake --install /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf
+[15.083s] -- Install configuration: ""
+[15.083s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/environment/library_path.sh
+[15.083s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/environment/library_path.dsv
+[15.084s] -- Installing: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/lib/robotx_ekf/ekf_node
+[15.084s] -- Set runtime path of "/home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/lib/robotx_ekf/ekf_node" to ""
+[15.084s] -- Installing: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/lib/libekf_component.so
+[15.098s] -- Set runtime path of "/home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/lib/libekf_component.so" to ""
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/include
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/include/robotx_ekf
+[15.098s] -- Installing: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/include/robotx_ekf/ekf_component.hpp
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/ament_index/resource_index/package_run_dependencies/robotx_ekf
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/ament_index/resource_index/parent_prefix_path/robotx_ekf
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/environment/ament_prefix_path.sh
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/environment/ament_prefix_path.dsv
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/environment/path.sh
+[15.098s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/environment/path.dsv
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/local_setup.bash
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/local_setup.sh
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/local_setup.zsh
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/local_setup.dsv
+[15.099s] -- Installing: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/package.dsv
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/ament_index/resource_index/packages/robotx_ekf
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/ament_index/resource_index/rclcpp_components/robotx_ekf
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/cmake/ament_cmake_export_libraries-extras.cmake
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/cmake/ament_cmake_export_include_directories-extras.cmake
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/cmake/robotx_ekfConfig.cmake
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/cmake/robotx_ekfConfig-version.cmake
+[15.099s] -- Up-to-date: /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/install/robotx_ekf/share/robotx_ekf/package.xml
+[15.101s] Invoked command in '/home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kenta/ouxt_automation/robotx_ws/install/rosboard:/home/kenta/ouxt_automation/robotx_ws/install/rospy2:/home/kenta/ouxt_automation/robotx_ws/install/ros2controlcli:/opt/ros/galactic /usr/bin/cmake --install /home/kenta/ouxt_automation/robotx_ws/src/localization/robotx_ekf/build/robotx_ekf
