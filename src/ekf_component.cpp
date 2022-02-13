@@ -19,10 +19,8 @@ namespace robotx_ekf
 {
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf", options)
 {
-  declare_parameter("receive_odom", true);
+  declare_parameter("receive_odom", false);
   get_parameter("receive_odom", receive_odom_);
-  declare_parameter("receive_pose", false);
-  get_parameter("receive_pose", receive_pose_);
 
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
@@ -38,14 +36,16 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   u = Eigen::VectorXd::Zero(6);
   cov = Eigen::VectorXd::Zero(36);
 
-  if (receive_odom_ && !receive_pose_) {
+  if (receive_odom_) {
     Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom", 100, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
-  } else if (receive_pose_ && !receive_odom_) {
+    std::cout << "[INFO]: we use topic /odom for observation " << std::endl;
+  } else if (!receive_odom_) {
     GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "/gps_pose", 100, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+    std::cout << "[INFO]: we use topic /gps_pose for observation" << std::endl;
   } else {
-    std::cout << "[ERROR]: plz, check parameter receive_odom_ & receive_pose_" << std::endl;
+    std::cout << "[ERROR]: plz, check parameter receive_odom_" << std::endl;
   }
 
   IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
@@ -209,7 +209,7 @@ void EKFComponent::update()
   if (receive_odom_) {
     pose_ekf.header.stamp = odomtimestamp;
   }
-  if (receive_pose_) {
+  if (!receive_odom_) {
     pose_ekf.header.stamp = gpstimestamp;
   }
   pose_ekf.header.frame_id = "/map";

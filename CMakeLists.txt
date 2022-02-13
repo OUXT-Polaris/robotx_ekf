@@ -37,13 +37,13 @@ ament_target_dependencies(ekf_component rclcpp rclcpp_components nav_msgs sensor
 rclcpp_components_register_nodes(ekf_component "robotx_ekf::EKFComponent")
 ament_export_libraries(ekf_component)
 
-add_executable(ekf_node src/ekf_node.cpp)
+add_executable(robotx_ekf_node src/ekf_node.cpp)
 
-target_link_libraries(ekf_node ekf_component Eigen3::Eigen)
+target_link_libraries(robotx_ekf_node ekf_component Eigen3::Eigen)
 
-ament_target_dependencies(ekf_node rclcpp rclcpp_components)
+ament_target_dependencies(robotx_ekf_node rclcpp rclcpp_components)
 
-install(TARGETS ekf_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS robotx_ekf_node DESTINATION lib/${PROJECT_NAME})
 install(TARGETS ekf_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
