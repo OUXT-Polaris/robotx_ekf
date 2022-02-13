@@ -19,9 +19,9 @@ namespace robotx_ekf
 {
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf", options)
 {
-  declare_parameter("receive_odom", false);
+  declare_parameter("receive_odom", true);
   get_parameter("receive_odom", receive_odom_);
-  declare_parameter("receive_pose", true);
+  declare_parameter("receive_pose", false);
   get_parameter("receive_pose", receive_pose_);
 
   A = Eigen::MatrixXd::Zero(10, 10);
@@ -39,10 +39,10 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   u = Eigen::VectorXd::Zero(6);
   cov = Eigen::VectorXd::Zero(36);
 
-  if (receive_odom_) {
+  if (receive_odom_ && !receive_pose_) {
     Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/odom_pose", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
-  } else if (receive_pose_) {
+      "/odom", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
+  } else if (receive_pose_ && !receive_odom_) {
     GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
   } else {
