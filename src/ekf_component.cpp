@@ -33,7 +33,6 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   S = Eigen::MatrixXd::Zero(10, 10);
   P = Eigen::MatrixXd::Zero(10, 10);
   I = Eigen::MatrixXd::Identity(10, 10);
-
   x = Eigen::VectorXd::Zero(10);
   y = Eigen::VectorXd::Zero(10);
   u = Eigen::VectorXd::Zero(6);
@@ -41,19 +40,19 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
 
   if (receive_odom_ && !receive_pose_) {
     Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/odom", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
+      "/odom", 100, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
   } else if (receive_pose_ && !receive_odom_) {
     GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+      "/gps_pose", 100, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
   } else {
     std::cout << "[ERROR]: plz, check parameter receive_odom_ & receive_pose_" << std::endl;
   }
 
   IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
-    "/imu", 10, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
+    "/imu", 100, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
   Posepublisher_ =
-    this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
+    this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 100);
 }
 
 void EKFComponent::GPStopic_callback(
@@ -72,7 +71,6 @@ void EKFComponent::GPStopic_callback(
 
 void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
 {
-  init();
   odomtimestamp = msg->header.stamp;
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
@@ -80,6 +78,7 @@ void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
   for (int i = 0; i < 36; i++) {
     cov(i) = msg->pose.covariance[i];
   }
+  init();
   update();
 }
 
@@ -97,7 +96,7 @@ void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 bool EKFComponent::init()
 {
   if (!initialized) {
-    x << y(1), y(2), y(3), 0, 0, 0, 0, 0, 0, 0;
+    x << y(0), y(1), y(2), 0, 0, 0, 0, 0, 0, 0;
     P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
@@ -180,18 +179,27 @@ void EKFComponent::update()
   M << 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 1;
 
-  Q << cov[0], cov[1], cov[2], 0, 0, 0, 0, cov[3], cov[4], cov[5], cov[6], cov[7], cov[8], 0, 0, 0,
-    0, cov[9], cov[10], cov[11], cov[12], cov[13], cov[14], 0, 0, 0, 0, cov[15], cov[16], cov[17],
+  // if you have GPS covariance, you can use here.
+  /*
+  Q << cov(0), cov(1), cov(2), 0, 0, 0, 0, cov(3), cov(4), cov(5), cov(6), cov(7), cov(8), 0, 0, 0,
+    0, cov(9), cov(10), cov(11), cov(12), cov(13), cov(14), 0, 0, 0, 0, cov(15), cov(16), cov(17),
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 0, 0, cov[18], cov[19], cov[20], 0, 0, 0, 0, cov[21], cov[22], cov[23],
-    cov[24], cov[25], cov[26], 0, 0, 0, 0, cov[27], cov[28], cov[29], cov[30], cov[31], cov[32], 0,
-    0, 0, 0, cov[33], cov[34], cov[35];
+    0, 0, 0, 0, 1, 0, 0, 0, cov(18), cov(19), cov(20), 0, 0, 0, 0, cov(21), cov(22), cov(23),
+    cov(24), cov(25), cov(26), 0, 0, 0, 0, cov(27), cov(28), cov(29), cov(30), cov(31), cov(32), 0,
+    0, 0, 0, cov(33), cov(34), cov(35);
+  */
+
+  Q << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1;
 
   // 予測ステップ
 
   modelfunc();
+  //x = A*x + B*u;
   P = A * P * A.transpose() + B * M * B.transpose();
-  S = (C * P * C.transpose() + Q);
+  S = C * P * C.transpose() + Q;
   K = P * C.transpose() * S.inverse();
   // フィルタリングステップ
   x += K * (y - C * x);
@@ -208,11 +216,13 @@ void EKFComponent::update()
   pose_ekf.pose.pose.position.x = x(0);
   pose_ekf.pose.pose.position.y = x(1);
   pose_ekf.pose.pose.position.z = x(2);
+
   pose_ekf.pose.covariance = {
     P(0, 0), P(0, 1), P(0, 2), P(0, 7), P(0, 8), P(0, 9), P(1, 0), P(1, 1), P(1, 2),
     P(1, 7), P(1, 8), P(1, 9), P(2, 0), P(2, 1), P(2, 2), P(2, 7), P(2, 8), P(2, 9),
     P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
     P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
+
   Posepublisher_->publish(pose_ekf);
 }
 }  // namespace robotx_ekf
