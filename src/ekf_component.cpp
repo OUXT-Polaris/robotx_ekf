@@ -39,13 +39,13 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   if (receive_odom_) {
     Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom", 100, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
-    std::cout << "[INFO]: we use topic /odom for observation "<< std::endl;
+    std::cout << "[INFO]: we use topic /odom for observation " << std::endl;
   } else if (!receive_odom_) {
     GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "/gps_pose", 100, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
-    std::cout << "[INFO]: we use topic /gps_pose for observation"<< std::endl;
+    std::cout << "[INFO]: we use topic /gps_pose for observation" << std::endl;
   } else {
-    std::cout << "[ERROR]: plz, check parameter receive_odom_ "<< std::endl;
+    std::cout << "[ERROR]: plz, check parameter receive_odom_" << std::endl;
   }
 
   IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
