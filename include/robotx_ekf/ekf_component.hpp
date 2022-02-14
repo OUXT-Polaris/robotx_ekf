@@ -69,20 +69,26 @@ public:
   ROBOTX_EKF__EKF_COMPONENT_PUBLIC
   explicit EKFComponent(const rclcpp::NodeOptions & options);
 
-  double dt = 0.01;
-  bool initialized;
+  double dt = 0.0025;
+  bool initialized = false;
   Eigen::MatrixXd P;
+  Eigen::VectorXd X;
   Eigen::VectorXd x;
   Eigen::VectorXd y;
+  Eigen::VectorXd yy;
   Eigen::VectorXd u;
   Eigen::MatrixXd I;
   Eigen::MatrixXd A;
   Eigen::MatrixXd B;
   Eigen::MatrixXd C;
+  Eigen::MatrixXd Cy;
   Eigen::MatrixXd M;
   Eigen::MatrixXd Q;
+  Eigen::MatrixXd L;
   Eigen::MatrixXd K;
   Eigen::MatrixXd S;
+  Eigen::MatrixXd Ky;
+  Eigen::MatrixXd Sy;
   Eigen::VectorXd cov;
 
   rclcpp::Time odomtimestamp;
@@ -95,6 +101,7 @@ private:
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void modelfunc();
+  void jacobi();
   bool init();
   void update();
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;

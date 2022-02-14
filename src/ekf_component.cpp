@@ -25,46 +25,54 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
   C = Eigen::MatrixXd::Zero(10, 10);
+  Cy = Eigen::MatrixXd::Zero(10, 10);
   M = Eigen::MatrixXd::Zero(6, 6);
   Q = Eigen::MatrixXd::Zero(10, 10);
+  L = Eigen::MatrixXd::Zero(10, 10);
   K = Eigen::MatrixXd::Zero(10, 10);
+  Ky = Eigen::MatrixXd::Zero(10, 10);
   S = Eigen::MatrixXd::Zero(10, 10);
+  Sy = Eigen::MatrixXd::Zero(10, 10);
   P = Eigen::MatrixXd::Zero(10, 10);
   I = Eigen::MatrixXd::Identity(10, 10);
   x = Eigen::VectorXd::Zero(10);
+  X = Eigen::VectorXd::Zero(10);
   y = Eigen::VectorXd::Zero(10);
+  yy = Eigen::VectorXd::Zero(10);
   u = Eigen::VectorXd::Zero(6);
   cov = Eigen::VectorXd::Zero(36);
 
   if (receive_odom_) {
     Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/odom", 100, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
+      "/odom", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
     std::cout << "[INFO]: we use topic /odom for observation " << std::endl;
   } else if (!receive_odom_) {
     GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "/gps_pose", 100, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+      "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
     std::cout << "[INFO]: we use topic /gps_pose for observation" << std::endl;
   } else {
     std::cout << "[ERROR]: plz, check parameter receive_odom_" << std::endl;
   }
 
   IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
-    "/imu", 100, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
+    "/imu", 10, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
   Posepublisher_ =
-    this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 100);
+    this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
 }
 
 void EKFComponent::GPStopic_callback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
-  init();
   gpstimestamp = msg->header.stamp;
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
   y(2) = msg->pose.pose.position.z;
   for (int i; i < 36; i++) {
     cov(i) = msg->pose.covariance[i];
+  }
+  if (!initialized) {
+    init();
   }
   update();
 }
@@ -78,8 +86,11 @@ void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
   for (int i = 0; i < 36; i++) {
     cov(i) = msg->pose.covariance[i];
   }
-  init();
-  update();
+  if (!initialized) {
+    init();
+  } else {
+    update();
+  }
 }
 
 void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
@@ -95,56 +106,50 @@ void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 
 bool EKFComponent::init()
 {
-  if (!initialized) {
-    x << y(0), y(1), y(2), 0, 0, 0, 0, 0, 0, 0;
-    P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 1;
-  }
+  x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
+  P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1;
   return initialized = true;
 }
 
 void EKFComponent::modelfunc()
 {
-  double xx, xy, xz, vx, vy, vz, w0, w1, w2, w3;
+  double xx, xy, xz, vx, vy, vz, q0, q1, q2, q3;
   xx = x(0);
   xy = x(1);
   xz = x(2);
   vx = x(3);
   vy = x(4);
   vz = x(5);
-  w0 = x(6);
-  w1 = x(7);
-  w2 = x(8);
-  w3 = x(9);
+  q0 = x(6);
+  q1 = x(7);
+  q2 = x(8);
+  q3 = x(9);
 
   x(0) = xx + vx * dt;
   x(1) = xy + vy * dt;
   x(2) = xz + vz * dt;
 
-  x(3) = vx + ((w0 * w0 + w1 * w1 - w2 * w2 - w3 * w3) * u(0) + (2 * w1 * w2 - 2 * w0 * w3) * u(1) +
-               (2 * w1 * w3 - 2 * w0 * w2) * u(2)) *
+  x(3) = vx + ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * u(0) + (2 * q1 * q2 - 2 * q0 * q3) * u(1) +
+               (2 * q1 * q3 - 2 * q0 * q2) * u(2)) *
                 dt;
-  x(4) = vx + ((2 * w1 * w2 + 2 * w0 * w3) * u(0) + (w0 * w0 + w2 * w2 - w1 * w1 - w3 * w3) * u(1) +
-               (2 * w2 * w3 - 2 * w0 * w1) * u(2)) *
+  x(4) = vy + ((2 * q1 * q2 + 2 * q0 * q3) * u(0) + (q0 * q0 + q2 * q2 - q1 * q1 - q3 * q3) * u(1) +
+               (2 * q2 * q3 - 2 * q0 * q1) * u(2)) *
                 dt;
-  x(5) = vx + ((2 * w1 * w3 - 2 * w0 * w2) * u(0) + (2 * w2 * w3 + 2 * w0 * w1) * u(1) +
-               (w0 * w0 + w3 * w3 - w1 * w1 - w2 * w2) * u(2) - 9.81) *
+  x(5) = vz + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
+               (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) - 9.81) *
                 dt;
 
-  x(6) = (-u(3) * w1 - u(4) * w2 - u(5) * w3) * dt + w0;
-  x(7) = (u(3) * w0 + u(5) * w2 - u(4) * w3) * dt + w1;
-  x(8) = (u(4) * w0 - u(5) * w1 + u(3) * w2) * dt + w2;
-  x(9) = (u(5) * w0 + u(4) * w1 - u(3) * w2) * dt + w3;
+  x(6) = (-u(3) * q1 - u(4) * q2 - u(5) * q3) * 0.5 * dt + q0;
+  x(7) = (u(3) * q0 + u(5) * q2 - u(4) * q3) * 0.5 * dt + q1;
+  x(8) = (u(4) * q0 - u(5) * q1 + u(3) * q2) * 0.5 * dt + q2;
+  x(9) = (u(5) * q0 + u(4) * q1 - u(3) * q2) * 0.5 * dt + q3;
 }
 
-void EKFComponent::update()
+void EKFComponent::jacobi()
 {
-  if (!initialized) {
-    std::cout << "NOT Initialized" << std::endl;
-  }
-
   A << 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, dt, 0, 0, 0, 0,
     0, 0, 0, 1, 0, 0, (2 * x(6) * u(0) - 2 * x(9) * u(1) + 2 * x(8) * u(2)) * dt,
     (2 * x(7) * u(0) + 2 * x(8) * u(1) + 2 * x(9) * u(2)) * dt,
@@ -173,9 +178,15 @@ void EKFComponent::update()
     -x(7) * dt, 0, 0, 0, -x(8) * dt, x(7) * dt, x(6) * dt;
 
   C << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1;
+
+  Cy << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0;
+
   M << 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 1;
 
@@ -194,16 +205,44 @@ void EKFComponent::update()
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 1;
 
-  // 予測ステップ
+  L << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1;
+}
 
+void EKFComponent::update()
+{
+  if (!initialized) {
+    std::cout << "NOT Initialized" << std::endl;
+  }
+
+  X = A * X + x - A * x;
+  yy = C * X;
+
+  // 予測ステップ
   modelfunc();
-  //x = A*x + B*u;
+  jacobi();
+  // filtering step 1
   P = A * P * A.transpose() + B * M * B.transpose();
   S = C * P * C.transpose() + Q;
+  Sy = Cy * P * Cy.transpose() + L;
   K = P * C.transpose() * S.inverse();
-  // フィルタリングステップ
-  x += K * (y - C * x);
-  P = (I - K * C) * P;
+  Ky = P * Cy.transpose() * Sy.inverse();
+  //x = x +  K * (yy - C * x);
+  //x = x +  Ky * (y - Cy * x);
+  x = x + K * (yy - C * x) + Ky * (y - Cy * x);
+  //P = (I - K * C) * P;
+  //P = (I - Ky * Cy) * P;
+  P = (I - K * C - Ky * Cy) * P;
+
+  /*
+  // filtering step 2
+  Sy = Cy * P * Cy.transpose() + L;
+  Ky = P * Cy.transpose() * Sy.inverse();
+  x = x + Ky * (y- Cy * x);
+  P = (I - Ky* Cy) * P;
+  */
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
   if (receive_odom_) {
