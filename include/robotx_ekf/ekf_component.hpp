@@ -72,8 +72,10 @@ public:
   double dt = 0.01;
   bool initialized;
   Eigen::MatrixXd P;
+  Eigen::VectorXd X;
   Eigen::VectorXd x;
   Eigen::VectorXd y;
+  Eigen::VectorXd yy;
   Eigen::VectorXd u;
   Eigen::MatrixXd I;
   Eigen::MatrixXd A;
@@ -95,6 +97,7 @@ private:
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void modelfunc();
+  void jacobi();
   bool init();
   void update();
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
