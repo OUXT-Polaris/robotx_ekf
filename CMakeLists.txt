@@ -32,38 +32,30 @@ include_directories(include ${EIGEN3_INCLUDE_DIR})
 
 add_library(ekf_component SHARED src/ekf_component.cpp)
 
-target_compile_definitions(ekf_component PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL")
-ament_target_dependencies(ekf_component rclcpp rclcpp_components nav_msgs sensor_msgs geometry_msgs)
-rclcpp_components_register_nodes(ekf_component "robotx_ekf::EKFComponent")
-ament_export_libraries(ekf_component)
+target_compile_definitions(
+  ekf_component 
+  PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL"
+  )
+
+ament_target_dependencies(ekf_component 
+  rclcpp 
+  rclcpp_components 
+  nav_msgs 
+  sensor_msgs 
+  geometry_msgs
+  )
+
+rclcpp_components_register_nodes(
+  ekf_component "robotx_ekf::EKFComponent"
+  )
 
 add_executable(robotx_ekf_node src/ekf_node.cpp)
 
-target_link_libraries(robotx_ekf_node ekf_component Eigen3::Eigen)
-
 ament_target_dependencies(robotx_ekf_node rclcpp rclcpp_components)
 
+target_link_libraries(robotx_ekf_node ekf_component Eigen3::Eigen)
+
 install(TARGETS robotx_ekf_node DESTINATION lib/${PROJECT_NAME})
-install(TARGETS ekf_component
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin)
-
-install(
-  DIRECTORY "include/"
-  DESTINATION include
-)
-
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
 
 ament_export_include_directories(include)
 ament_package()

@@ -25,10 +25,14 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
   C = Eigen::MatrixXd::Zero(10, 10);
+  Cy = Eigen::MatrixXd::Zero(10, 10);
   M = Eigen::MatrixXd::Zero(6, 6);
   Q = Eigen::MatrixXd::Zero(10, 10);
+  L = Eigen::MatrixXd::Zero(10, 10);
   K = Eigen::MatrixXd::Zero(10, 10);
+  Ky = Eigen::MatrixXd::Zero(10, 10);
   S = Eigen::MatrixXd::Zero(10, 10);
+  Sy = Eigen::MatrixXd::Zero(10, 10);
   P = Eigen::MatrixXd::Zero(10, 10);
   I = Eigen::MatrixXd::Identity(10, 10);
   x = Eigen::VectorXd::Zero(10);
@@ -77,12 +81,15 @@ void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
   y(0) = msg->pose.pose.position.x;
   y(1) = msg->pose.pose.position.y;
   y(2) = msg->pose.pose.position.z;
-  std::cout << "y: " << y(1) << std::endl;
   for (int i = 0; i < 36; i++) {
     cov(i) = msg->pose.covariance[i];
   }
-  if (!initialized) { init();}
-  update();
+  if (!initialized) { 
+    init();
+    }else{
+    update();
+  }
+  
 }
 
 void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
@@ -98,13 +105,11 @@ void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 
 bool EKFComponent::init()
 {
-  if (!initialized) {
-    x << y(0), y(1), y(2), 0, 0, 0, 0, 0, 0, 0;
-    P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 1;
-  }
+  x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
+  P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1;
   return initialized = true;
 }
 
@@ -121,7 +126,7 @@ void EKFComponent::modelfunc()
   q1 = x(7);
   q2 = x(8);
   q3 = x(9);
-  
+
   x(0) = xx + vx * dt;
   x(1) = xy + vy * dt;
   x(2) = xz + vz * dt;
@@ -129,10 +134,10 @@ void EKFComponent::modelfunc()
   x(3) = vx + ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * u(0) + (2 * q1 * q2 - 2 * q0 * q3) * u(1) +
                (2 * q1 * q3 - 2 * q0 * q2) * u(2)) *
                 dt;
-  x(4) = vx + ((2 * q1 * q2 + 2 * q0 * q3) * u(0) + (q0 * q0 + q2 * q2 - q1 * q1 - q3 * q3) * u(1) +
+  x(4) = vy + ((2 * q1 * q2 + 2 * q0 * q3) * u(0) + (q0 * q0 + q2 * q2 - q1 * q1 - q3 * q3) * u(1) +
                (2 * q2 * q3 - 2 * q0 * q1) * u(2)) *
                 dt;
-  x(5) = vx + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
+  x(5) = vz + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
                (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) - 9.81) *
                 dt;
 
@@ -171,10 +176,28 @@ void EKFComponent::jacobi()
     x(8) * dt, -x(9) * dt, 0, 0, 0, x(6) * dt, -x(9) * dt, x(8) * dt, 0, 0, 0, x(9) * dt, x(6) * dt,
     -x(7) * dt, 0, 0, 0, -x(8) * dt, x(7) * dt, x(6) * dt;
 
-  C << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1;
+  C << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+       0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 
+       0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 
+       0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 
+       0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 
+       0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 
+       0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+
+  Cy << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
   M << 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 1;
 
@@ -193,6 +216,10 @@ void EKFComponent::jacobi()
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 1;
 
+  L << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1;
 }
 
 void EKFComponent::update()
@@ -201,20 +228,31 @@ void EKFComponent::update()
     std::cout << "NOT Initialized" << std::endl;
   }
 
-  // X = A * X + x - A * x ;
-  // yy = C * X;
-  std::cout << "x(1): " << x(1) << std::endl;
+  X = A * X + x - A * x ;
+  yy = C * X;
+  
   // 予測ステップ
   modelfunc();
   jacobi();
-  //x = A*x + B*u;
-  /*
+  // filtering step 1
   P = A * P * A.transpose() + B * M * B.transpose();
   S = C * P * C.transpose() + Q;
+  Sy = Cy * P * Cy.transpose() + L;
   K = P * C.transpose() * S.inverse();
-  // フィルタリングステップ
-  x = x +  K * (yy - C * x);
-  P = (I - K * C) * P;
+  Ky = P * Cy.transpose() * Sy.inverse();
+  //x = x +  K * (yy - C * x);
+  //x = x +  Ky * (y - Cy * x);
+  x = x +  K * (yy - C * x) + Ky * (y- Cy * x);
+  //P = (I - K * C) * P;
+  //P = (I - Ky * Cy) * P;
+  P = (I - K * C - Ky * Cy) * P;
+  
+  /*
+  // filtering step 2
+  Sy = Cy * P * Cy.transpose() + L;
+  Ky = P * Cy.transpose() * Sy.inverse();
+  x = x + Ky * (y- Cy * x);
+  P = (I - Ky* Cy) * P;
   */
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
