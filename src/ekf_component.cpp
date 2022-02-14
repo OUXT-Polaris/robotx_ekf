@@ -19,7 +19,7 @@ namespace robotx_ekf
 {
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf", options)
 {
-  declare_parameter("receive_odom", true);
+  declare_parameter("receive_odom", false);
   get_parameter("receive_odom", receive_odom_);
 
   A = Eigen::MatrixXd::Zero(10, 10);
