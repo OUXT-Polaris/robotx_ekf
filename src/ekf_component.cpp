@@ -142,10 +142,10 @@ void EKFComponent::modelfunc()
                (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) - 9.81) *
                 dt;
 
-  x(6) = (-u(3) * q1 - u(4) * q2 - u(5) * q3) * 0.5 * dt + q0;
-  x(7) = (u(3) * q0 + u(5) * q2 - u(4) * q3) * 0.5 * dt + q1;
-  x(8) = (u(4) * q0 - u(5) * q1 + u(3) * q2) * 0.5 * dt + q2;
-  x(9) = (u(5) * q0 + u(4) * q1 - u(3) * q2) * 0.5 * dt + q3;
+  x(6) = (-u(3) * q1 - u(4) * q2 - u(5) * q3) * dt + q0;
+  x(7) = (u(3) * q0 + u(5) * q2 - u(4) * q3) * dt + q1;
+  x(8) = (u(4) * q0 - u(5) * q1 + u(3) * q2) * dt + q2;
+  x(9) = (u(5) * q0 + u(4) * q1 - u(3) * q2) * dt + q3;
 }
 
 void EKFComponent::jacobi()
