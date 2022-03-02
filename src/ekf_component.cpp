@@ -25,20 +25,14 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
   C = Eigen::MatrixXd::Zero(10, 10);
-  Cy = Eigen::MatrixXd::Zero(10, 10);
   M = Eigen::MatrixXd::Zero(6, 6);
   Q = Eigen::MatrixXd::Zero(10, 10);
-  L = Eigen::MatrixXd::Zero(10, 10);
   K = Eigen::MatrixXd::Zero(10, 10);
-  Ky = Eigen::MatrixXd::Zero(10, 10);
   S = Eigen::MatrixXd::Zero(10, 10);
-  Sy = Eigen::MatrixXd::Zero(10, 10);
   P = Eigen::MatrixXd::Zero(10, 10);
   I = Eigen::MatrixXd::Identity(10, 10);
   x = Eigen::VectorXd::Zero(10);
-  X = Eigen::VectorXd::Zero(10);
   y = Eigen::VectorXd::Zero(10);
-  yy = Eigen::VectorXd::Zero(10);
   u = Eigen::VectorXd::Zero(6);
   cov = Eigen::VectorXd::Zero(36);
 
@@ -178,11 +172,6 @@ void EKFComponent::jacobi()
     -x(7) * dt, 0, 0, 0, -x(8) * dt, x(7) * dt, x(6) * dt;
 
   C << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1;
-
-  Cy << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0;
@@ -204,11 +193,6 @@ void EKFComponent::jacobi()
     0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 1;
-
-  L << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1;
 }
 
 void EKFComponent::update()
@@ -217,32 +201,15 @@ void EKFComponent::update()
     std::cout << "NOT Initialized" << std::endl;
   }
 
-  X = A * X + x - A * x;
-  yy = C * X;
-
   // 予測ステップ
   modelfunc();
   jacobi();
   // filtering step 1
   P = A * P * A.transpose() + B * M * B.transpose();
   S = C * P * C.transpose() + Q;
-  Sy = Cy * P * Cy.transpose() + L;
   K = P * C.transpose() * S.inverse();
-  Ky = P * Cy.transpose() * Sy.inverse();
-  //x = x +  K * (yy - C * x);
-  //x = x +  Ky * (y - Cy * x);
-  x = x + K * (yy - C * x) + Ky * (y - Cy * x);
-  //P = (I - K * C) * P;
-  //P = (I - Ky * Cy) * P;
-  P = (I - K * C - Ky * Cy) * P;
-
-  /*
-  // filtering step 2
-  Sy = Cy * P * Cy.transpose() + L;
-  Ky = P * Cy.transpose() * Sy.inverse();
-  x = x + Ky * (y- Cy * x);
-  P = (I - Ky* Cy) * P;
-  */
+  x = x + K * (y - C * x);
+  P = (I - K * C) * P;
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
   if (receive_odom_) {

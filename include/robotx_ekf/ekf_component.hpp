@@ -72,23 +72,17 @@ public:
   double dt = 0.0025;
   bool initialized = false;
   Eigen::MatrixXd P;
-  Eigen::VectorXd X;
   Eigen::VectorXd x;
   Eigen::VectorXd y;
-  Eigen::VectorXd yy;
   Eigen::VectorXd u;
   Eigen::MatrixXd I;
   Eigen::MatrixXd A;
   Eigen::MatrixXd B;
   Eigen::MatrixXd C;
-  Eigen::MatrixXd Cy;
   Eigen::MatrixXd M;
   Eigen::MatrixXd Q;
-  Eigen::MatrixXd L;
   Eigen::MatrixXd K;
   Eigen::MatrixXd S;
-  Eigen::MatrixXd Ky;
-  Eigen::MatrixXd Sy;
   Eigen::VectorXd cov;
 
   rclcpp::Time odomtimestamp;
