@@ -69,7 +69,7 @@ public:
   ROBOTX_EKF__EKF_COMPONENT_PUBLIC
   explicit EKFComponent(const rclcpp::NodeOptions & options);
 
-  double dt = 0.0025;
+  double dt = 0.01;
   bool initialized = false;
   Eigen::MatrixXd P;
   Eigen::VectorXd x;
