@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <Eigen/Dense>
-#include <rclcpp_components/register_node_macro.hpp>
 #include <robotx_ekf/ekf_component.hpp>
+#include <rclcpp_components/register_node_macro.hpp>
 
 namespace robotx_ekf
 {
