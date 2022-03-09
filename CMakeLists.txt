@@ -34,7 +34,7 @@ add_library(ekf_component SHARED src/ekf_component.cpp)
 
 target_compile_definitions(
   ekf_component 
-  PRIVATE "ROBOTX_EKF__EKF_COMPONENT_BUILDING_DLL"
+  PRIVATE "ROBOTX_EKF_EKF_COMPONENT_BUILDING_DLL"
   )
 
 ament_target_dependencies(ekf_component 
@@ -56,6 +56,14 @@ ament_target_dependencies(robotx_ekf_node rclcpp rclcpp_components)
 target_link_libraries(robotx_ekf_node ekf_component Eigen3::Eigen)
 
 install(TARGETS robotx_ekf_node DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS ekf_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  )
+
+ament_export_libraries(ekf_component)
 
 ament_export_include_directories(include)
 ament_package()
