@@ -69,7 +69,6 @@ public:
   ROBOTX_EKF_EKF_COMPONENT_PUBLIC
   explicit EKFComponent(const rclcpp::NodeOptions & options);
 
-  double dt = 0.01;
   bool initialized = false;
   Eigen::MatrixXd P;
   Eigen::VectorXd x;
@@ -84,6 +83,12 @@ public:
   Eigen::MatrixXd K;
   Eigen::MatrixXd S;
   Eigen::VectorXd cov;
+  Eigen::VectorXd E;
+  Eigen::VectorXd G;
+  
+  Eigen::VectorXd a;
+  Eigen::VectorXd am;
+  Eigen::VectorXd z;
 
   rclcpp::Time odomtimestamp;
   rclcpp::Time gpstimestamp;
@@ -91,9 +96,18 @@ public:
 
 private:
   bool receive_odom_;
+  double dt = 0.01; // looprate
+  double k = 0.8; // low pass filter
+  
+  double esp = 0.1; // prefilter
+  double g = 9.81; // gravity
+
   void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void observation();
+  void prefilter();
+  void LPF();
   void modelfunc();
   void jacobi();
   bool init();
@@ -102,6 +116,7 @@ private:
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr Odomsubscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr Posepublisher_;
+  rclcpp::TimerBase::SharedPtr timer_;
 };
 }  // namespace robotx_ekf
 

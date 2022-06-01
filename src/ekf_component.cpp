@@ -25,17 +25,28 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
 
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
-  C = Eigen::MatrixXd::Zero(10, 10);
-  M = Eigen::MatrixXd::Zero(6, 6);
-  Q = Eigen::MatrixXd::Zero(10, 10);
-  K = Eigen::MatrixXd::Zero(10, 10);
-  S = Eigen::MatrixXd::Zero(10, 10);
+  C = Eigen::MatrixXd::Zero(6, 10);
+
+  M = Eigen::MatrixXd::Zero(6, 10);
+  Q = Eigen::MatrixXd::Zero(6, 6);
+
+  K = Eigen::MatrixXd::Zero(10, 6);
+  S = Eigen::MatrixXd::Zero(6, 6);
   P = Eigen::MatrixXd::Zero(10, 10);
   I = Eigen::MatrixXd::Identity(10, 10);
+
   x = Eigen::VectorXd::Zero(10);
-  y = Eigen::VectorXd::Zero(10);
+  
   u = Eigen::VectorXd::Zero(6);
   cov = Eigen::VectorXd::Zero(36);
+
+  y = Eigen::VectorXd::Zero(6);
+  z = Eigen::VectorXd::Zero(6);
+  a = Eigen::VectorXd::Zero(3);
+  am = Eigen::VectorXd::Zero(3);
+
+  G = Eigen::VectorXd::Zero(3);
+  
 
   if (receive_odom_) {
     Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -54,6 +65,8 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
 
   Posepublisher_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
+  
+  timer_ = this->create_wall_timer(10ms, std::bind(&EKFComponent::update, this));
 }
 
 void EKFComponent::GPStopic_callback(
@@ -66,10 +79,6 @@ void EKFComponent::GPStopic_callback(
   for (int i; i < 36; i++) {
     cov(i) = msg->pose.covariance[i];
   }
-  if (!initialized) {
-    init();
-  }
-  update();
 }
 
 void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
@@ -80,11 +89,6 @@ void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
   y(2) = msg->pose.pose.position.z;
   for (int i = 0; i < 36; i++) {
     cov(i) = msg->pose.covariance[i];
-  }
-  if (!initialized) {
-    init();
-  } else {
-    update();
   }
 }
 
@@ -97,6 +101,25 @@ void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   u(3) = msg->angular_velocity.x;
   u(4) = msg->angular_velocity.y;
   u(5) = msg->angular_velocity.z;
+
+  am << u(0), u(1), u(2);
+}
+
+void EKFComponent::LPF()
+{
+  a = a + k * (am - a); 
+}
+
+void EKFComponent::prefilter()
+{ 
+  Eigen::VectorXd a_dr(3);
+  a_dr = E * am - G;
+  double norm_am = std::sqrt(u(0)*u(0)+u(1)*u(1)+u(2)*u(2));
+    if(norm_am < g + eps)
+    {
+      a_dr << 0, 0, 0;
+    }
+  a = a - E * a_dr;
 }
 
 bool EKFComponent::init()
@@ -106,6 +129,8 @@ bool EKFComponent::init()
     0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 1;
+
+  G << 0, 0, g;
   return initialized = true;
 }
 
@@ -134,13 +159,25 @@ void EKFComponent::modelfunc()
                (2 * q2 * q3 - 2 * q0 * q1) * u(2)) *
                 dt;
   x(5) = vz + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
-               (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) - 9.81) *
+               (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) + 9.81) *
                 dt;
 
   x(6) = (-u(3) * q1 - u(4) * q2 - u(5) * q3) * dt + q0;
   x(7) = (u(3) * q0 + u(5) * q2 - u(4) * q3) * dt + q1;
   x(8) = (u(4) * q0 - u(5) * q1 + u(3) * q2) * dt + q2;
   x(9) = (u(5) * q0 + u(4) * q1 - u(3) * q2) * dt + q3;
+}
+
+void EKFComponent::observation()
+{
+  z(0) = x(0);
+  z(1) = x(1);
+  z(2) = x(2);
+  z(seq(3, last)) = E.transpose()*G + E.transpose()*a;
+  
+  y(3) = a(0);
+  y(4) = a(1);
+  y(5) = a(2);
 }
 
 void EKFComponent::jacobi()
@@ -172,10 +209,13 @@ void EKFComponent::jacobi()
     x(8) * dt, -x(9) * dt, 0, 0, 0, x(6) * dt, -x(9) * dt, x(8) * dt, 0, 0, 0, x(9) * dt, x(6) * dt,
     -x(7) * dt, 0, 0, 0, -x(8) * dt, x(7) * dt, x(6) * dt;
 
-  C << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0;
+  C <<  1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 2*(-x(8)*g+x(6)*a(0)+x(9)*a(1)+x(8)*a(2)), 2*(x(9)*g+x(7)*a(0)+x(8)*a(1)+x(9)*a(2)), 2*(-x(6)*g-x(8)*a(0)+x(1)*a(1)-x(6)*a(2)), 2*(x(7)*g-x(9)*a(0)+x(6)*a(1)+x(7)*a(2)),  
+        0, 0, 0, 0, 0, 0, 2*(x(7)*g-x(9)*a(0)+x(6)*a(1)+x(1)*a(2)), 2*(x(6)*g+x(8)*a(0)-x(7)*a(1)+x(6)*a(2)), 2*(-x(9)*g+x(7)*a(0)+x(2)*a(1)+x(9)*a(2)), 2*(x(8)*g-x(6)*a(0)-x(9)*a(1)+x(8)*a(2)), 
+        0, 0, 0, 0, 0, 0, 2*(x(6)*g+x(8)*a(0)-x(7)*a(1)+x(6)*a(2)), 2*(-x(7)*g+x(9)*a(0)-x(6)*a(1)-x(7)*a(2)), 2*(-x(8)*g+x(6)*a(0)+x(9)*a(1)-x(8)*a(2)), 2*(x(9)*g+x(7)*a(0)+x(8)*a(1)+x(9)*a(2)); 
+        
 
   M << 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 1;
@@ -194,22 +234,37 @@ void EKFComponent::jacobi()
     0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 1;
+  
+  // kitai zahyou -> kannsei zahyou
+  E << (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)),
+    2 * (x(7) * x(8) - x(6) * x(9)), 2 * (x(7) * x(9) + x(6) * x(8)), 
+    2 * (x(7) * x(8) + x(6) * x(9)), (x(6) * x(6) - x(7) * x(7) + x(8) * x(8) - x(9) * x(9)),
+    2 * (x(8) * x(9) - x(6) * x(7)), 2 * (x(7) * x(9) - x(6) * x(8)),
+    2 * (x(8) * x(9) + x(6) * x(7)), (x(6) * x(6) - x(7) * x(7) - x(8) * x(8) + x(9) * x(9));
 }
 
 void EKFComponent::update()
 {
   if (!initialized) {
+    init();
+  }
+  if (!initialized) {
     std::cout << "NOT Initialized" << std::endl;
   }
-
+   
+  // prefilter
+  prefilter();
+  LPF();
   // 予測ステップ
+
   modelfunc();
+
   jacobi();
   // filtering step 1
   P = A * P * A.transpose() + B * M * B.transpose();
   S = C * P * C.transpose() + Q;
   K = P * C.transpose() * S.inverse();
-  x = x + K * (y - C * x);
+  x = x + K * (y - z);
   P = (I - K * C) * P;
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
