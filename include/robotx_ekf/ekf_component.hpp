@@ -83,9 +83,11 @@ public:
   Eigen::MatrixXd K;
   Eigen::MatrixXd S;
   Eigen::VectorXd cov;
-  Eigen::VectorXd E;
+
   Eigen::VectorXd G;
-  
+
+  Eigen::MatrixXd E;
+
   Eigen::VectorXd a;
   Eigen::VectorXd am;
   Eigen::VectorXd z;
@@ -96,11 +98,11 @@ public:
 
 private:
   bool receive_odom_;
-  double dt = 0.01; // looprate
-  double k = 0.8; // low pass filter
-  
-  double esp = 0.1; // prefilter
-  double g = 9.81; // gravity
+  double dt = 0.01;  // looprate
+  double k = 0.6;    // low pass filter
+
+  double eps = 0.1;  // prefilter
+  double g = 9.81;    // gravity
 
   void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
