@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <Eigen/Dense>
-#include <robotx_ekf/ekf_component.hpp>
+#include "robotx_ekf/ekf_component.hpp"
+
 #include <rclcpp_components/register_node_macro.hpp>
 
 namespace robotx_ekf
@@ -233,5 +233,4 @@ void EKFComponent::update()
   Posepublisher_->publish(pose_ekf);
 }
 }  // namespace robotx_ekf
-
 RCLCPP_COMPONENTS_REGISTER_NODE(robotx_ekf::EKFComponent)
