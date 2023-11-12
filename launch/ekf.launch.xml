@@ -1,0 +1,10 @@
+<launch>
+  <!-- component container(動的にノードを載せられるExecutor)を用意 -->
+  <node_container pkg="rclcpp_components" exec="component_container_mt" name="ekf_container" namespace="ekf" args="">
+    <composable_node pkg="geographic_conversion" plugin="geographic_conversion::GeoposeConverterComponent" name="geopose_converter_component">
+    </composable_node>
+
+    <composable_node pkg="robotx_ekf" plugin="robotx_ekf::EKFComponent" name="ekf_component">
+    </composable_node>
+  </node_container>
+</launch>

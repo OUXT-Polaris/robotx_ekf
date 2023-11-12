@@ -15,8 +15,8 @@
 #include <Eigen/Dense>
 #include <chrono>
 #include <iostream>
+#include "robotx_ekf/ekf_component.hpp"
 
-#include <robotx_ekf/ekf_component.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
 using namespace std::chrono_literals;
@@ -301,5 +301,4 @@ void EKFComponent::update()
   Posepublisher_->publish(pose_ekf);
 }
 }  // namespace robotx_ekf
-
 RCLCPP_COMPONENTS_REGISTER_NODE(robotx_ekf::EKFComponent)
