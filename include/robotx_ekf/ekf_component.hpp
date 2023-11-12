@@ -102,13 +102,13 @@ private:
   double k = 0.6;    // low pass filter
 
   double eps = 0.1;  // prefilter
-  double g = 9.81;    // gravity
+  double g = 9.81;   // gravity
 
   void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void observation();
-  void prefilter();
+  // void prefilter();
   void LPF();
   void modelfunc();
   void jacobi();

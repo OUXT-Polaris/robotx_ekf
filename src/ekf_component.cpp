@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <Eigen/Dense>
-#include <chrono>
-#include <iostream>
 #include "robotx_ekf/ekf_component.hpp"
 
+#include <chrono>
 #include <rclcpp_components/register_node_macro.hpp>
 
 using namespace std::chrono_literals;
@@ -113,25 +111,25 @@ void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 
 void EKFComponent::LPF() { a = a + k * (am - a); }
 
-void EKFComponent::prefilter()
-{
-  Eigen::VectorXd a_dr(3);
-  a_dr = E * a - G;
-  a = a - E.transpose() * a_dr;
-  double norm_am = std::sqrt(u(0) * u(0) + u(1) * u(1) + u(2) * u(2));
-  if (norm_am < g + eps) {
-    a_dr << 0, 0, 0;
-  }
-  a = a + E.transpose() * a_dr;
-}
+// void EKFComponent::prefilter()
+// {
+//   Eigen::VectorXd a_dr(3);
+//   a_dr = E * a - G;
+//   a = a - E.transpose() * a_dr;
+//   double norm_am = std::sqrt(u(0) * u(0) + u(1) * u(1) + u(2) * u(2));
+//   if (norm_am < g + eps) {
+//     a_dr << 0, 0, 0;
+//   }
+//   a = a + E.transpose() * a_dr;
+// }
 
 bool EKFComponent::init()
 {
   x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
-  P << 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 100;
+  P << 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100;
 
   G << 0, 0, -g;
   return initialized = true;
@@ -253,7 +251,7 @@ void EKFComponent::update()
   // prefilter
   LPF();
   //std::cout << "c" << std::endl;
-  prefilter();
+  // prefilter();
   //std::cout << "d" << std::endl;
   // 予測ステップ
 
