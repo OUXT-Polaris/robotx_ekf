@@ -15,6 +15,7 @@
 #include "robotx_ekf/ekf_component.hpp"
 
 #include <chrono>
+#include <optional>
 #include <rclcpp_components/register_node_macro.hpp>
 
 using namespace std::chrono_literals;
@@ -23,7 +24,7 @@ namespace robotx_ekf
 {
 EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf_node", options)
 {
-  declare_parameter("receive_odom", true);
+  declare_parameter("receive_odom", false);
   get_parameter("receive_odom", receive_odom_);
 
   A = Eigen::MatrixXd::Zero(10, 10);
@@ -76,12 +77,15 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
 void EKFComponent::GPStopic_callback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
-  gpstimestamp = msg->header.stamp;
-  y(0) = msg->pose.pose.position.x;
-  y(1) = msg->pose.pose.position.y;
-  y(2) = msg->pose.pose.position.z;
-  for (int i; i < 36; i++) {
-    cov(i) = msg->pose.covariance[i];
+  std::optional optional_y = msg->pose.pose.position.x;
+  if (optional_y.has_value()){
+    gpstimestamp = msg->header.stamp;
+    y(0) = msg->pose.pose.position.x;
+    y(1) = msg->pose.pose.position.y;
+    y(2) = msg->pose.pose.position.z;
+    for (int i; i < 36; i++) {
+      cov(i) = msg->pose.covariance[i];
+    }
   }
 }
 
@@ -98,41 +102,52 @@ void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg)
 
 void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  imutimestamp = msg->header.stamp;
-  u(0) = msg->linear_acceleration.x;
-  u(1) = msg->linear_acceleration.y;
-  u(2) = msg->linear_acceleration.z;
-  u(3) = msg->angular_velocity.x;
-  u(4) = msg->angular_velocity.y;
-  u(5) = msg->angular_velocity.z;
+  std::optional optional_imu = msg->linear_acceleration.x;
+  if(optional_imu.has_value()){
+    imutimestamp = msg->header.stamp;
+    u(0) = msg->linear_acceleration.x;
+    u(1) = msg->linear_acceleration.y;
+    u(2) = msg->linear_acceleration.z;
+    u(3) = msg->angular_velocity.x;
+    u(4) = msg->angular_velocity.y;
+    u(5) = msg->angular_velocity.z;
 
-  am << u(0), u(1), u(2);
+    am << u(0), u(1), u(2);
+  }
 }
 
 void EKFComponent::LPF() { a = a + k * (am - a); }
 
-// void EKFComponent::prefilter()
-// {
-//   Eigen::VectorXd a_dr(3);
-//   a_dr = E * a - G;
-//   a = a - E.transpose() * a_dr;
-//   double norm_am = std::sqrt(u(0) * u(0) + u(1) * u(1) + u(2) * u(2));
-//   if (norm_am < g + eps) {
-//     a_dr << 0, 0, 0;
-//   }
-//   a = a + E.transpose() * a_dr;
-// }
+void EKFComponent::prefilter()
+{
+  Eigen::VectorXd a_dr(3);
+  a_dr = E * a - G;
+  a = a - E.transpose() * a_dr;
+  double norm_am = std::sqrt(u(0) * u(0) + u(1) * u(1) + u(2) * u(2));
+  if (norm_am < g + eps) {
+    a_dr << 0, 0, 0;
+  }
+  a = a + E.transpose() * a_dr;
+}
 
 bool EKFComponent::init()
 {
+  std::optional optional_init = y(0);
+  // optional_init.has_value()
+  if(y(0)!=0 && u(0)!=0){
   x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
-  P << 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100;
+  // x << 6000000, -280000, -1, 0, 0, 0, 1, 0, 0, 0;
+  double P_x = 1;
+  P << P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x;
 
   G << 0, 0, -g;
-  return initialized = true;
+  initialized = true;
+  }else{initialized = false;}
+  
+  return initialized;
 }
 
 void EKFComponent::modelfunc()
@@ -160,7 +175,7 @@ void EKFComponent::modelfunc()
                (2 * q2 * q3 - 2 * q0 * q1) * u(2)) *
                 dt;
   x(5) = vz + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
-               (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) - g) *
+               (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) + g) *
                 dt;
 
   x(6) = 0.5 * (-u(3) * q1 - u(4) * q2 - u(5) * q3) * dt + q0;
@@ -214,21 +229,22 @@ void EKFComponent::jacobi()
     0, 0, 0, 0, 0, 2 * (x(7) * (-g)), 2 * (x(6) * (-g)), 2 * (-x(9) * (-g)), 2 * (x(8) * (-g)), 0,
     0, 0, 0, 0, 0, 2 * x(6) * (-g), 2 * -x(7) * (-g), 2 * -x(8) * (-g), 2 * x(9) * (-g);
 
-  M << 300, 0, 0, 0, 0, 0, 0, 300, 0, 0, 0, 0, 0, 0, 300, 0, 0, 0, 0, 0, 0, 300, 0, 0, 0, 0, 0, 0,
-    300, 0, 0, 0, 0, 0, 0, 300;
+  double M_x = 50;
+  M << M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, 10*M_x, 0, 0, 0, 0, 0, 0,
+    10*M_x, 0, 0, 0, 0, 0, 0, 10*M_x;
 
   // if you have GPS covariance, you can use here.
-  /*
-  Q << cov(0), cov(1), cov(2), 0, 0, 0, 0, cov(3), cov(4), cov(5), cov(6), cov(7), cov(8), 0, 0, 0,
-    0, cov(9), cov(10), cov(11), cov(12), cov(13), cov(14), 0, 0, 0, 0, cov(15), cov(16), cov(17),
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 0, 0, cov(18), cov(19), cov(20), 0, 0, 0, 0, cov(21), cov(22), cov(23),
-    cov(24), cov(25), cov(26), 0, 0, 0, 0, cov(27), cov(28), cov(29), cov(30), cov(31), cov(32), 0,
-    0, 0, 0, cov(33), cov(34), cov(35);
-  */
-
-  Q << 10, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 10,
-    0, 0, 0, 0, 0, 0, 10;
+  
+  // Q << cov(0), cov(1), cov(2), 0, 0, 0, 0, cov(3), cov(4), cov(5), cov(6), cov(7), cov(8), 0, 0, 0,
+  //   0, cov(9), cov(10), cov(11), cov(12), cov(13), cov(14), 0, 0, 0, 0, cov(15), cov(16), cov(17),
+  //   0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+  //   0, 0, 0, 0, 1, 0, 0, 0, cov(18), cov(19), cov(20), 0, 0, 0, 0, cov(21), cov(22), cov(23),
+  //   cov(24), cov(25), cov(26), 0, 0, 0, 0, cov(27), cov(28), cov(29), cov(30), cov(31), cov(32), 0,
+  //   0, 0, 0, cov(33), cov(34), cov(35);
+  
+  double Q_x = 3;
+  Q << Q_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x,
+    0, 0, 0, 0, 0, 0, M_x;
 
   // frame_base -> Inertial_base
   E << (x(6) * x(6) + x(7) * x(7) - x(8) * x(8) - x(9) * x(9)), 2 * (x(7) * x(8) - x(6) * x(9)),
@@ -241,12 +257,10 @@ void EKFComponent::jacobi()
 void EKFComponent::update()
 {
   //std::cout << "a" << std::endl;
-  if (!initialized) {
+  if(!initialized) {
     init();
-  }
-  if (!initialized) {
-    std::cout << "NOT Initialized" << std::endl;
-  }
+  }else{
+  
   //std::cout << "b" << std::endl;
   // prefilter
   LPF();
@@ -284,7 +298,7 @@ void EKFComponent::update()
   pose_ekf.pose.pose.position.y = x(1);
   pose_ekf.pose.pose.position.z = x(2);
 
-  pose_ekf.pose.pose.orientation.z = x(3);
+  pose_ekf.pose.pose.orientation.w = x(3);
   pose_ekf.pose.pose.orientation.x = x(4);
   pose_ekf.pose.pose.orientation.y = x(5);
   pose_ekf.pose.pose.orientation.z = x(6);
@@ -297,6 +311,7 @@ void EKFComponent::update()
     P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
   Posepublisher_->publish(pose_ekf);
+  }
 }
 }  // namespace robotx_ekf
 RCLCPP_COMPONENTS_REGISTER_NODE(robotx_ekf::EKFComponent)
