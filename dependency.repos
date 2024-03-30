@@ -3,3 +3,7 @@ repositories:
     url: https://github.com/OUXT-Polaris/ouxt_common.git
     type: git
     version: master
+  odom_frame_publisher:
+    url: https://github.com/OUXT-Polaris/odom_frame_publisher.git
+    type: git
+    version: ros2

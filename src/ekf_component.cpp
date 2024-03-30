@@ -53,22 +53,23 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   G = Eigen::VectorXd::Zero(3);
 
   if (receive_odom_) {
-    Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
     std::cout << "[INFO]: we use topic /odom for observation " << std::endl;
 
   } else if (!receive_odom_) {
-    GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+    gps_pose_subscription_ =
+      this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
     std::cout << "[INFO]: we use topic /gps_pose for observation" << std::endl;
   } else {
     std::cout << "[ERROR]: plz, check parameter receive_odom_" << std::endl;
   }
 
-  IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
+  imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
     "/imu", 10, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
-  Posepublisher_ =
+  pose_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
 
   timer_ = this->create_wall_timer(10ms, std::bind(&EKFComponent::update, this));
@@ -311,7 +312,7 @@ void EKFComponent::update()
       P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
       P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
-    Posepublisher_->publish(pose_ekf);
+    pose_publisher_->publish(pose_ekf);
   }
 }
 }  // namespace robotx_ekf
