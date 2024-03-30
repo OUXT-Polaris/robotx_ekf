@@ -29,6 +29,10 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   get_parameter("receive_odom", receive_odom_);
   declare_parameter("broadcast_map_transform", true);
   get_parameter("broadcast_transform", broadcast_transform_);
+  declare_parameter("robot_frame_id", "base_link");
+  get_parameter("robot_frame_id", robot_frame_id_);
+  declare_parameter("map_frame_id", "map");
+  get_parameter("map_frame_id", map_frame_id_);
 
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
@@ -298,7 +302,7 @@ void EKFComponent::update()
     if (!receive_odom_) {
       pose_ekf.header.stamp = gpstimestamp;
     }
-    pose_ekf.header.frame_id = "/map";
+    pose_ekf.header.frame_id = map_frame_id_;
     pose_ekf.pose.pose.position.x = x(0);
     pose_ekf.pose.pose.position.y = x(1);
     pose_ekf.pose.pose.position.z = x(2);
@@ -316,6 +320,17 @@ void EKFComponent::update()
       P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
     ekf_pose_publisher_->publish(pose_ekf);
+    if (broadcast_transform_) {
+      geometry_msgs::msg::TransformStamped transform_stamped;
+      transform_stamped.header.frame_id = map_frame_id_;
+      transform_stamped.header.stamp = pose_ekf.header.stamp;
+      transform_stamped.child_frame_id = robot_frame_id_;
+      transform_stamped.transform.translation.x = pose_ekf.pose.pose.position.x;
+      transform_stamped.transform.translation.y = pose_ekf.pose.pose.position.y;
+      transform_stamped.transform.translation.z = pose_ekf.pose.pose.position.z;
+      transform_stamped.transform.rotation = pose_ekf.pose.pose.orientation;
+      broadcaster_.sendTransform(transform_stamped);
+    }
   }
 }
 }  // namespace robotx_ekf

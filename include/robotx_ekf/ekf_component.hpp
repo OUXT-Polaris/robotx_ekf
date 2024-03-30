@@ -124,6 +124,8 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::TransformBroadcaster broadcaster_;
   bool broadcast_transform_;
+  std::string robot_frame_id_;
+  std::string map_frame_id_;
 };
 }  // namespace robotx_ekf
 
