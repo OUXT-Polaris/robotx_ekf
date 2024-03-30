@@ -27,7 +27,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
 {
   declare_parameter("receive_odom", false);
   get_parameter("receive_odom", receive_odom_);
-  declare_parameter("broadcast_map_transform", true);
+  declare_parameter("broadcast_transform", true);
   get_parameter("broadcast_transform", broadcast_transform_);
   declare_parameter("robot_frame_id", "base_link");
   get_parameter("robot_frame_id", robot_frame_id_);

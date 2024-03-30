@@ -1,15 +1,34 @@
 <launch>
+  <arg name="vrx" default="false"/>
   <arg name="use_sim_time" default="false"/>
 
-  <node_container pkg="rclcpp_components" exec="component_container_mt" name="ekf_container" namespace="localization" args="">
-    <composable_node pkg="geographic_conversion" plugin="geographic_conversion::GeoposeConverterComponent" name="geopose_converter_component" namespace="localization">
-      <param name="use_sim_time" value="$(var use_sim_time)"/>
-      <param name="use_intra_process_comms" value="true"/>
-    </composable_node>
+  <group if="$(var vrx)">
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="ekf_container" namespace="localization" args="">
+      <composable_node pkg="geographic_conversion" plugin="geographic_conversion::GeoposeConverterComponent" name="geopose_converter_component" namespace="localization">
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+        <param name="use_intra_process_comms" value="true"/>
+      </composable_node>
 
-    <composable_node pkg="robotx_ekf" plugin="robotx_ekf::EKFComponent" name="ekf_component" namespace="localization">
-      <param name="use_sim_time" value="$(var use_sim_time)"/>
-      <param name="use_intra_process_comms" value="true"/>
-    </composable_node>
-  </node_container>
+      <composable_node pkg="robotx_ekf" plugin="robotx_ekf::EKFComponent" name="ekf_component" namespace="localization">
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+        <param name="use_intra_process_comms" value="true"/>
+        <param name="robot_frame_id" value="wamv/wamv/base_link"/>
+      </composable_node>
+    </node_container>
+  </group>
+
+  <group unless="$(var vrx)">
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="ekf_container" namespace="localization" args="">
+      <composable_node pkg="geographic_conversion" plugin="geographic_conversion::GeoposeConverterComponent" name="geopose_converter_component" namespace="localization">
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+        <param name="use_intra_process_comms" value="true"/>
+      </composable_node>
+
+      <composable_node pkg="robotx_ekf" plugin="robotx_ekf::EKFComponent" name="ekf_component" namespace="localization">
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+        <param name="use_intra_process_comms" value="true"/>
+        <param name="robot_frame_id" value="base_link"/>
+      </composable_node>
+    </node_container>
+  </group>
 </launch>
