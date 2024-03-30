@@ -22,10 +22,13 @@ using namespace std::chrono_literals;
 
 namespace robotx_ekf
 {
-EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf_node", options)
+EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
+: Node("robotx_ekf_node", options), broadcaster_(this)
 {
   declare_parameter("receive_odom", false);
   get_parameter("receive_odom", receive_odom_);
+  declare_parameter("broadcast_map_transform", true);
+  get_parameter("broadcast_transform", broadcast_transform_);
 
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
@@ -69,7 +72,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
     "/imu", 10, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
-  pose_publisher_ =
+  ekf_pose_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
 
   timer_ = this->create_wall_timer(10ms, std::bind(&EKFComponent::update, this));
@@ -312,7 +315,7 @@ void EKFComponent::update()
       P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
       P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
-    pose_publisher_->publish(pose_ekf);
+    ekf_pose_publisher_->publish(pose_ekf);
   }
 }
 }  // namespace robotx_ekf

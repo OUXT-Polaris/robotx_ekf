@@ -53,6 +53,8 @@ extern "C" {
 }  // extern "C"
 #endif
 
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <Eigen/Dense>
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
@@ -118,8 +120,10 @@ private:
     gps_pose_subscription_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr ekf_pose_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
+  tf2_ros::TransformBroadcaster broadcaster_;
+  bool broadcast_transform_;
 };
 }  // namespace robotx_ekf
 
