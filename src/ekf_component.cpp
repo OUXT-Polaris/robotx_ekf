@@ -34,6 +34,22 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   declare_parameter("map_frame_id", "map");
   get_parameter("map_frame_id", map_frame_id_);
 
+  declare_parameter("position_covariance_x", 0.1);
+  get_parameter("position_covariance_x", covariance.position_covariance.x);
+  declare_parameter("position_covariance_y", 0.1);
+  get_parameter("position_covariance_y", covariance.position_covariance.y);
+  declare_parameter("position_covariance_z", 0.1);
+  get_parameter("position_covariance_z", covariance.position_covariance.z);
+
+  declare_parameter("orientation_covariance_x", 0.01);
+  get_parameter("orientation_covariance_x", covariance.orientation_covariance.x);
+  declare_parameter("orientation_covariance_y", 0.01);
+  get_parameter("orientation_covariance_y", covariance.orientation_covariance.y);
+  declare_parameter("orientation_covariance_z", 0.01);
+  get_parameter("orientation_covariance_z", covariance.orientation_covariance.z);
+  declare_parameter("orientation_covariance_w", 0.01);
+  get_parameter("orientation_covariance_w", covariance.orientation_covariance.w);
+
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
   C = Eigen::MatrixXd::Zero(6, 10);
@@ -145,11 +161,18 @@ bool EKFComponent::init()
   if (y(0) != 0 && u(0) != 0) {
     x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
     // x << 6000000, -280000, -1, 0, 0, 0, 1, 0, 0, 0;
-    double P_x = 1;
-    P << P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x;
+    double P_x = 0;
+    P << 
+      P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, P_x, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, P_x, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, P_x, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, P_x, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, P_x, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, P_x, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, P_x, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, P_x, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, P_x;
 
     G << 0, 0, -g;
     initialized = true;
@@ -307,10 +330,14 @@ void EKFComponent::update()
     pose_ekf.pose.pose.position.y = x(1);
     pose_ekf.pose.pose.position.z = x(2);
 
-    pose_ekf.pose.pose.orientation.w = x(3);
-    pose_ekf.pose.pose.orientation.x = x(4);
-    pose_ekf.pose.pose.orientation.y = x(5);
-    pose_ekf.pose.pose.orientation.z = x(6);
+    pose_ekf.pose.pose.orientation.w =
+      x(3) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+    pose_ekf.pose.pose.orientation.x =
+      x(4) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+    pose_ekf.pose.pose.orientation.y =
+      x(5) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+    pose_ekf.pose.pose.orientation.z =
+      x(6) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
 
     //std::cout << "m" << std::endl;
     pose_ekf.pose.covariance = {

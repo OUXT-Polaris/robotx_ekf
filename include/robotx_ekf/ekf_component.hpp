@@ -65,6 +65,27 @@ extern "C" {
 
 namespace robotx_ekf
 {
+struct PositionCovariance
+{
+  double x = 0;
+  double y = 0;
+  double z = 0;
+};
+
+struct OrientationCovariance
+{
+  double x = 0;
+  double y = 0;
+  double z = 0;
+  double w = 0;
+};
+
+struct PoseCovariance
+{
+  PositionCovariance position_covariance;
+  OrientationCovariance orientation_covariance;
+};
+
 class EKFComponent : public rclcpp::Node
 {
 public:
@@ -126,6 +147,7 @@ private:
   bool broadcast_transform_;
   std::string robot_frame_id_;
   std::string map_frame_id_;
+  PoseCovariance covariance;
 };
 }  // namespace robotx_ekf
 
