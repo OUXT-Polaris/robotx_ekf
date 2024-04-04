@@ -7,3 +7,7 @@ repositories:
     url: https://github.com/OUXT-Polaris/odom_frame_publisher.git
     type: git
     version: ros2
+  kalman_filter_localization:
+    url: https://github.com/rsasaki0109/kalman_filter_localization.git
+    type: git
+    version: devel
