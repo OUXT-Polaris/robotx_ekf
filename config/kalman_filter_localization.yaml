@@ -12,3 +12,4 @@
     var_odom: 0.1
     use_gnss: true
     use_odom: false
+    use_gnss_as_initial_pose: true
