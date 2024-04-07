@@ -8,6 +8,6 @@ repositories:
     type: git
     version: ros2
   kalman_filter_localization:
-    url: https://github.com/rsasaki0109/kalman_filter_localization.git
+    url: https://github.com/OUXT-Polaris/kalman_filter_localization.git
     type: git
-    version: devel
+    version: feature/use_gnss_as_initial_pose
