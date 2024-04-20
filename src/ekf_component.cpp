@@ -162,17 +162,10 @@ bool EKFComponent::init()
     x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
     // x << 6000000, -280000, -1, 0, 0, 0, 1, 0, 0, 0;
     double P_x = 0;
-    P << 
-      P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, P_x, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, P_x, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, P_x, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, P_x, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, P_x, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, P_x, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, P_x, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, P_x, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, P_x;
+    P << P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x;
 
     G << 0, 0, -g;
     initialized = true;
@@ -320,10 +313,10 @@ void EKFComponent::update()
     //std::cout << "l" << std::endl;
     geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
     if (receive_odom_) {
-      pose_ekf.header.stamp = odomtimestamp;
+      pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);
     }
     if (!receive_odom_) {
-      pose_ekf.header.stamp = gpstimestamp;
+      pose_ekf.header.stamp = std::max(gpstimestamp, imutimestamp);
     }
     pose_ekf.header.frame_id = map_frame_id_;
     pose_ekf.pose.pose.position.x = x(0);
