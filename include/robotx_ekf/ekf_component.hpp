@@ -16,7 +16,8 @@
 #define ROBOTX_EKF__EKF_COMPONENT_HPP_
 
 #if __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 // The below macros are taken from https://gcc.gnu.org/wiki/Visibility and from
@@ -50,7 +51,7 @@ extern "C" {
 #endif
 
 #if __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
 #include <Eigen/Dense>
@@ -63,63 +64,90 @@ extern "C" {
 
 namespace robotx_ekf
 {
-class EKFComponent : public rclcpp::Node
-{
-public:
-  ROBOTX_EKF_EKF_COMPONENT_PUBLIC
-  explicit EKFComponent(const rclcpp::NodeOptions & options);
+  struct State
+  {
+    double xx, xy, xz, vx, vy, vz, q0, q1, q2, q3;
+  };
 
-  bool initialized = false;
-  Eigen::MatrixXd P;
-  Eigen::VectorXd x;
-  Eigen::VectorXd y;
-  Eigen::VectorXd u;
-  Eigen::MatrixXd I;
-  Eigen::MatrixXd A;
-  Eigen::MatrixXd B;
-  Eigen::MatrixXd C;
-  Eigen::MatrixXd M;
-  Eigen::MatrixXd Q;
-  Eigen::MatrixXd K;
-  Eigen::MatrixXd S;
-  Eigen::VectorXd cov;
+  struct IMU {
+    Eigen::Vector3d a{};
+    Eigen::Vector3d gy{};
+  };
 
-  Eigen::VectorXd G;
+  struct GPS {
+    Eigen::Vector3d x{};
+  };
 
-  Eigen::MatrixXd E;
+  class EKFComponent : public rclcpp::Node
+  {
+  public:
+    ROBOTX_EKF_EKF_COMPONENT_PUBLIC
+    explicit EKFComponent(const rclcpp::NodeOptions &options);
 
-  Eigen::VectorXd a;
-  Eigen::VectorXd am;
-  Eigen::VectorXd z;
+    void CalcPoseByEKF(const IMU &IMU_data, const GPS &GPS_data);
+    bool Initialize();
 
-  rclcpp::Time odomtimestamp;
-  rclcpp::Time gpstimestamp;
-  rclcpp::Time imutimestamp;
+  private:
+    // Callback function
+    void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+    void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+    void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
-private:
-  bool receive_odom_;
-  double dt = 0.01;  // looprate
-  double k = 0.9;    // low pass filter
+    void jacobi();
 
-  double eps = 0.1;   // prefilter
-  double g = 9.7967;  // gravity
+    void UpdateStateByEq(const IMU &IMU_data,
+                         State &updated_state,
+                         Eigen::MatrixXd &P,
+                         Eigen::MatrixXd &K);
 
-  void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-  void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-  void observation();
-  void prefilter();
-  void LPF();
-  void modelfunc();
-  void jacobi();
-  bool init();
-  void update();
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr Odomsubscription_;
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr Posepublisher_;
-  rclcpp::TimerBase::SharedPtr timer_;
-};
-}  // namespace robotx_ekf
+    void UpdateStateByObservation(const GPS &GPS_data,
+                                  State &updated_state,
+                                  Eigen::MatrixXd &P
+                                  Eigen::MatrixXd &K);
 
-#endif  // ROBOTX_EKF__EKF_COMPONENT_HPP_
+    bool receive_odom_;
+    const double dt = 0.01; //looprate
+    const double g = 9.7967; // gravity
+
+    bool is_initialized = false;
+    Eigen::MatrixXd P;
+    Eigen::VectorXd x;
+    Eigen::VectorXd y;
+    Eigen::VectorXd u;
+    Eigen::MatrixXd I;
+    Eigen::MatrixXd A;
+    Eigen::MatrixXd B;
+    Eigen::MatrixXd C;
+    Eigen::MatrixXd M;
+    Eigen::MatrixXd Q;
+    
+    Eigen::MatrixXd S;
+    Eigen::VectorXd cov;
+
+    Eigen::VectorXd G;
+
+    Eigen::MatrixXd E;
+
+    Eigen::VectorXd a;
+    Eigen::VectorXd am;
+    Eigen::VectorXd z;
+
+    rclcpp::Time odomtimestamp;
+    rclcpp::Time gpstimestamp;
+    rclcpp::Time imutimestamp;
+
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr Odomsubscription_;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr Posepublisher_;
+    rclcpp::TimerBase::SharedPtr timer_;
+
+    State updated_state_;
+    Eigen::MatrixXd P_;
+    Eigen::MatrixXd K_;
+
+
+  };
+} // namespace robotx_ekf
+
+#endif // ROBOTX_EKF__EKF_COMPONENT_HPP_
