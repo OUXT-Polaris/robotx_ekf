@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    reference_frame_id: "map"
+    robot_frame_id: "wamv/wamv/base_link"
+    gnss_pose_topic: "gps_pose"
+    imu_topic: "/wamv/sensors/imu/imu/data"
+    odom_topic: "odom"
+    pub_period: 10
+    var_imu_w: 10.0
+    var_imu_acc: 100.0
+    var_gnss: 100.0
+    var_odom: 0.01
+    use_gnss: true
+    use_odom: false
+    use_gnss_as_initial_pose: true

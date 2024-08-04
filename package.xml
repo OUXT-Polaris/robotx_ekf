@@ -13,7 +13,8 @@
   <build_depend>nav_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>sensor_msgs</build_depend>
-  
+  <build_depend>tf2_ros</build_depend>
+
   <build_export_depend>rclcpp</build_export_depend> 
   <build_export_depend>nav_msgs</build_export_depend>
   <build_export_depend>geometry_msgs</build_export_depend>
@@ -22,7 +23,9 @@
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-  
+  <exec_depend>odom_frame_publisher</exec_depend>
+  <exec_depend>kalman_filter_localization</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ouxt_lint_common</test_depend>
 

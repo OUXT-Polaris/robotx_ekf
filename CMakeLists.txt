@@ -17,7 +17,7 @@ rclcpp_components_register_nodes(ekf_component "robotx_ekf::EKFComponent")
 target_link_libraries(robotx_ekf_node ekf_component Eigen3::Eigen)
 
 install(DIRECTORY
-  launch
+  launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 

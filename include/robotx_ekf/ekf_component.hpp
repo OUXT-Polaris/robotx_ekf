@@ -53,6 +53,8 @@ extern "C" {
 }  // extern "C"
 #endif
 
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <Eigen/Dense>
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
@@ -63,6 +65,27 @@ extern "C" {
 
 namespace robotx_ekf
 {
+struct PositionCovariance
+{
+  double x = 0;
+  double y = 0;
+  double z = 0;
+};
+
+struct OrientationCovariance
+{
+  double x = 0;
+  double y = 0;
+  double z = 0;
+  double w = 0;
+};
+
+struct PoseCovariance
+{
+  PositionCovariance position_covariance;
+  OrientationCovariance orientation_covariance;
+};
+
 class EKFComponent : public rclcpp::Node
 {
 public:
@@ -114,11 +137,17 @@ private:
   void jacobi();
   bool init();
   void update();
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr GPSsubscription_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr Odomsubscription_;
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr IMUsubscription_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr Posepublisher_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+    gps_pose_subscription_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr ekf_pose_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
+  tf2_ros::TransformBroadcaster broadcaster_;
+  bool broadcast_transform_;
+  std::string robot_frame_id_;
+  std::string map_frame_id_;
+  PoseCovariance covariance;
 };
 }  // namespace robotx_ekf
 

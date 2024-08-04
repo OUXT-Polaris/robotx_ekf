@@ -22,10 +22,33 @@ using namespace std::chrono_literals;
 
 namespace robotx_ekf
 {
-EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_ekf_node", options)
+EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
+: Node("robotx_ekf_node", options), broadcaster_(this)
 {
   declare_parameter("receive_odom", false);
   get_parameter("receive_odom", receive_odom_);
+  declare_parameter("broadcast_transform", true);
+  get_parameter("broadcast_transform", broadcast_transform_);
+  declare_parameter("robot_frame_id", "base_link");
+  get_parameter("robot_frame_id", robot_frame_id_);
+  declare_parameter("map_frame_id", "map");
+  get_parameter("map_frame_id", map_frame_id_);
+
+  declare_parameter("position_covariance_x", 0.1);
+  get_parameter("position_covariance_x", covariance.position_covariance.x);
+  declare_parameter("position_covariance_y", 0.1);
+  get_parameter("position_covariance_y", covariance.position_covariance.y);
+  declare_parameter("position_covariance_z", 0.1);
+  get_parameter("position_covariance_z", covariance.position_covariance.z);
+
+  declare_parameter("orientation_covariance_x", 0.01);
+  get_parameter("orientation_covariance_x", covariance.orientation_covariance.x);
+  declare_parameter("orientation_covariance_y", 0.01);
+  get_parameter("orientation_covariance_y", covariance.orientation_covariance.y);
+  declare_parameter("orientation_covariance_z", 0.01);
+  get_parameter("orientation_covariance_z", covariance.orientation_covariance.z);
+  declare_parameter("orientation_covariance_w", 0.01);
+  get_parameter("orientation_covariance_w", covariance.orientation_covariance.w);
 
   A = Eigen::MatrixXd::Zero(10, 10);
   B = Eigen::MatrixXd::Zero(10, 6);
@@ -53,22 +76,23 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options) : Node("robotx_e
   G = Eigen::VectorXd::Zero(3);
 
   if (receive_odom_) {
-    Odomsubscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom", 10, std::bind(&EKFComponent::Odomtopic_callback, this, std::placeholders::_1));
     std::cout << "[INFO]: we use topic /odom for observation " << std::endl;
 
   } else if (!receive_odom_) {
-    GPSsubscription_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
+    gps_pose_subscription_ =
+      this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        "/gps_pose", 10, std::bind(&EKFComponent::GPStopic_callback, this, std::placeholders::_1));
     std::cout << "[INFO]: we use topic /gps_pose for observation" << std::endl;
   } else {
     std::cout << "[ERROR]: plz, check parameter receive_odom_" << std::endl;
   }
 
-  IMUsubscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
+  imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
     "/imu", 10, std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
-  Posepublisher_ =
+  ekf_pose_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
 
   timer_ = this->create_wall_timer(10ms, std::bind(&EKFComponent::update, this));
@@ -137,7 +161,7 @@ bool EKFComponent::init()
   if (y(0) != 0 && u(0) != 0) {
     x << y(0), y(1), y(2), 0, 0, 0, 1, 0, 0, 0;
     // x << 6000000, -280000, -1, 0, 0, 0, 1, 0, 0, 0;
-    double P_x = 1;
+    double P_x = 0;
     P << P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -289,20 +313,24 @@ void EKFComponent::update()
     //std::cout << "l" << std::endl;
     geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
     if (receive_odom_) {
-      pose_ekf.header.stamp = odomtimestamp;
+      pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);
     }
     if (!receive_odom_) {
-      pose_ekf.header.stamp = gpstimestamp;
+      pose_ekf.header.stamp = std::max(gpstimestamp, imutimestamp);
     }
-    pose_ekf.header.frame_id = "/map";
+    pose_ekf.header.frame_id = map_frame_id_;
     pose_ekf.pose.pose.position.x = x(0);
     pose_ekf.pose.pose.position.y = x(1);
     pose_ekf.pose.pose.position.z = x(2);
 
-    pose_ekf.pose.pose.orientation.w = x(3);
-    pose_ekf.pose.pose.orientation.x = x(4);
-    pose_ekf.pose.pose.orientation.y = x(5);
-    pose_ekf.pose.pose.orientation.z = x(6);
+    pose_ekf.pose.pose.orientation.w =
+      x(3) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+    pose_ekf.pose.pose.orientation.x =
+      x(4) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+    pose_ekf.pose.pose.orientation.y =
+      x(5) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+    pose_ekf.pose.pose.orientation.z =
+      x(6) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
 
     //std::cout << "m" << std::endl;
     pose_ekf.pose.covariance = {
@@ -311,7 +339,18 @@ void EKFComponent::update()
       P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
       P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
-    Posepublisher_->publish(pose_ekf);
+    ekf_pose_publisher_->publish(pose_ekf);
+    if (broadcast_transform_) {
+      geometry_msgs::msg::TransformStamped transform_stamped;
+      transform_stamped.header.frame_id = map_frame_id_;
+      transform_stamped.header.stamp = pose_ekf.header.stamp;
+      transform_stamped.child_frame_id = robot_frame_id_;
+      transform_stamped.transform.translation.x = pose_ekf.pose.pose.position.x;
+      transform_stamped.transform.translation.y = pose_ekf.pose.pose.position.y;
+      transform_stamped.transform.translation.z = pose_ekf.pose.pose.position.z;
+      transform_stamped.transform.rotation = pose_ekf.pose.pose.orientation;
+      broadcaster_.sendTransform(transform_stamped);
+    }
   }
 }
 }  // namespace robotx_ekf
