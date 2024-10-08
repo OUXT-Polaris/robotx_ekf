@@ -106,11 +106,11 @@ private:
   Eigen::MatrixXd I;
   Eigen::VectorXd G;
   
-  bool is_initialized;
-  Eigen::Vector10d state_;
-  Eigen::Vector3d acceleration_;
-  Eigen::Vector3d gyro_;
-  Eigen::Vector3d position_from_gnss_;
+  bool is_initialized_;
+  Eigen::VectorXd state_;
+  Eigen::VectorXd acceleration_;
+  Eigen::VectorXd gyro_;
+  Eigen::VectorXd position_from_gnss_;
 
   rclcpp::Time imutimestamp;
   rclcpp::Time odomtimestamp;
@@ -130,13 +130,13 @@ private:
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
-  void StateEquation(const Eigen::Vector3d& acceleration,
-                     const Eigen::Vector3d& gyro,
-                     Eigen::Vector10d&      state);
+  void UpdateByStateEq(const Eigen::VectorXd& acceleration,
+                     const Eigen::VectorXd& gyro,
+                     Eigen::VectorXd&      current_state);
 
-  void EKFComponent::CalculateJacobi(const Eigen::Vector10d& current_state,
-                                      const Eigen::Vector3d& acceleration,
-                                      const Eigen::Vector3d& gyro,
+  void CalculateMatrices(const Eigen::VectorXd& current_state,
+                                      const Eigen::VectorXd& acceleration,
+                                      const Eigen::VectorXd& gyro,
                                      Eigen::MatrixXd&        A,
                                      Eigen::MatrixXd&        B,
                                      Eigen::MatrixXd&        C,
@@ -146,22 +146,21 @@ private:
                                      Eigen::MatrixXd&        P,
                                      Eigen::MatrixXd&        S,
                                      Eigen::MatrixXd&        K);
-  bool init();
 
-  void UpdateByObservation(const Eigen::Vector3d& position_from_gnss,
-                               const Eigen::Vector3d& acceleration,
+  void UpdateByObservation(const Eigen::VectorXd& position_from_gnss,
+                               const Eigen::VectorXd& acceleration,
                                const Eigen::MatrixXd& C,
                                const Eigen::MatrixXd& E,
                                const Eigen::MatrixXd& K,
-                               Eigen::Vector3d&       current_state,
-                               Eigen::MatrixXd&       P)
+                               Eigen::VectorXd&       current_state,
+                               Eigen::MatrixXd&       P);
  
-  void CalcPositionByEKF(const Eigen::Vector3d& acceleration,
-                         const Eigen::Vector3d& gyro,
-                         const Eigen::Vector3d& position_from_gnss);
+  void CalcPositionByEKF(const Eigen::VectorXd& acceleration,
+                         const Eigen::VectorXd& gyro,
+                         const Eigen::VectorXd& position_from_gnss);
 
+  void timer_callback();
 
-  
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     gps_pose_subscription_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;

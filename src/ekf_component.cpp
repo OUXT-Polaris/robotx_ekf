@@ -35,7 +35,7 @@ EKFComponent::EKFComponent(const rclcpp::NodeOptions & options)
   this->setup_subscribers_and_publishers();
 
   // タイマーの設定
-  timer_ = this->create_wall_timer(10ms, std::bind(&EKFComponent::CalcPositionByEKF, this));
+  timer_ = this->create_wall_timer(10ms, std::bind(&EKFComponent::timer_callback, this));
 }
 
 void EKFComponent::declare_parameters()
@@ -66,7 +66,7 @@ void EKFComponent::declare_parameters()
   get_parameter("orientation_covariance_w", covariance.orientation_covariance.w);
 }
 
-void EKFComponent::intialize_matrices()
+void EKFComponent::initialize_matrices()
 {
   state_              = Eigen::VectorXd::Zero(10);
   acceleration_       = Eigen::VectorXd::Zero(3);
@@ -131,16 +131,22 @@ void EKFComponent::GPStopic_callback(
   }
 
   // Initialize
-  if (!is_initialized)
+  if (!is_initialized_)
   {
     state_(0) = position_from_gnss_(0);
     state_(1) = position_from_gnss_(1);
     state_(2) = position_from_gnss_(2);
+    
+    // if you can get orientation from gnss 
+    // state_(6) = msg->pose.pose.orientation.w; // qx
+    // state_(7) = msg->pose.pose.orientation.state; // qy
+    // state_(8) = msg->pose.pose.orientation.y; // qz
+    // state_(9) = msg->pose.pose.orientation.z; // qw
 
-    state_(6) = msg->pose.pose.orientation.w; // qx
-    state_(7) = msg->pose.pose.orientation.state; // qy
-    state_(8) = msg->pose.pose.orientation.y; // qz
-    state_(9) = msg->pose.pose.orientation.z; // qw
+    state_(6) = 1.0; // qx
+    state_(7) = 0.0; // qy
+    state_(8) = 0.0; // qz
+    state_(9) = 0.0; // qw
     
     const double P_x = 0.01;
     P_ << P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, P_x, 0, 0, 0, 0, 0,
@@ -181,21 +187,21 @@ void EKFComponent::IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   
 }
 
-void EKFComponent::UpdateByStateEq(const Eigen::Vector3d& acceleration,
-                                   const Eigen::Vector3d& gyro,
-                                   Eigen::Vector10d&      state)
+void EKFComponent::UpdateByStateEq(const Eigen::VectorXd& acceleration,
+                                   const Eigen::VectorXd& gyro,
+                                   Eigen::VectorXd&       current_state)
 {
-  const double xx, xy, xz, vx, vy, vz, q0, q1, q2, q3;
-  xx = state(0);
-  xy = state(1);
-  xz = state(2);
-  vx = state(3);
-  vy = state(4);
-  vz = state(5);
-  q0 = state(6);
-  q1 = state(7);
-  q2 = state(8);
-  q3 = state(9);
+  double xx, xy, xz, vx, vy, vz, q0, q1, q2, q3;
+  xx = current_state(0);
+  xy = current_state(1);
+  xz = current_state(2);
+  vx = current_state(3);
+  vy = current_state(4);
+  vz = current_state(5);
+  q0 = current_state(6);
+  q1 = current_state(7);
+  q2 = current_state(8);
+  q3 = current_state(9);
 
   // quaternion 
   const double norm = sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
@@ -207,31 +213,31 @@ void EKFComponent::UpdateByStateEq(const Eigen::Vector3d& acceleration,
   Eigen::VectorXd u(6);
   u << acceleration, gyro;
 
-  state(0) = xx + vx * dt;
-  state(1) = xy + vy * dt;
-  state(2) = xz + vz * dt;
+  current_state(0) = xx + vx * dt;
+  current_state(1) = xy + vy * dt;
+  current_state(2) = xz + vz * dt;
 
-  state(3) = vx + ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * u(0) + (2 * q1 * q2 - 2 * q0 * q3) * u(1) +
+  current_state(3) = vx + ((q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * u(0) + (2 * q1 * q2 - 2 * q0 * q3) * u(1) +
                (2 * q1 * q3 - 2 * q0 * q2) * u(2)) *
                 dt;
-  state(4) = vy + ((2 * q1 * q2 + 2 * q0 * q3) * u(0) + (q0 * q0 + q2 * q2 - q1 * q1 - q3 * q3) * u(1) +
+  current_state(4) = vy + ((2 * q1 * q2 + 2 * q0 * q3) * u(0) + (q0 * q0 + q2 * q2 - q1 * q1 - q3 * q3) * u(1) +
                (2 * q2 * q3 - 2 * q0 * q1) * u(2)) *
                 dt;
-  state(5) = vz + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
+  current_state(5) = vz + ((2 * q1 * q3 - 2 * q0 * q2) * u(0) + (2 * q2 * q3 + 2 * q0 * q1) * u(1) +
                (q0 * q0 + q3 * q3 - q1 * q1 - q2 * q2) * u(2) + g) *
                 dt;
 
-  state(6) = 0.5 * (-u(3) * q1 - u(4) * q2 - u(5) * q3) * dt + q0;
-  state(7) = 0.5 * (u(3) * q0 + u(5) * q2 - u(4) * q3) * dt + q1;
-  state(8) = 0.5 * (u(4) * q0 - u(5) * q1 + u(3) * q2) * dt + q2;
-  state(9) = 0.5 * (u(5) * q0 + u(4) * q1 - u(3) * q2) * dt + q3;
+  current_state(6) = 0.5 * (-u(3) * q1 - u(4) * q2 - u(5) * q3) * dt + q0;
+  current_state(7) = 0.5 * (u(3) * q0 + u(5) * q2 - u(4) * q3) * dt + q1;
+  current_state(8) = 0.5 * (u(4) * q0 - u(5) * q1 + u(3) * q2) * dt + q2;
+  current_state(9) = 0.5 * (u(5) * q0 + u(4) * q1 - u(3) * q2) * dt + q3;
 }
 
 
 
-void EKFComponent::CalculateJacobi(const Eigen::Vector10d& current_state,
-                                   const Eigen::Vector3d& acceleration,
-                                   const Eigen::Vector3d& gyro,
+void EKFComponent::CalculateMatrices(const Eigen::VectorXd& current_state,
+                                   const Eigen::VectorXd& acceleration,
+                                   const Eigen::VectorXd& gyro,
                                   Eigen::MatrixXd&        A,
                                   Eigen::MatrixXd&        B,
                                   Eigen::MatrixXd&        C,
@@ -311,17 +317,17 @@ void EKFComponent::CalculateJacobi(const Eigen::Vector10d& current_state,
   K = P * C.transpose() * S.inverse();
 }
 
-void EKFComponent::UpdateByObservation(const Eigen::Vector3d& position_from_gnss,
-                                       const Eigen::Vector3d& acceleration,
+void EKFComponent::UpdateByObservation(const Eigen::VectorXd& position_from_gnss,
+                                       const Eigen::VectorXd& acceleration,
                                        const Eigen::MatrixXd& C,
                                        const Eigen::MatrixXd& E,
                                        const Eigen::MatrixXd& K,
-                                       Eigen::Vector3d&       current_state,
+                                       Eigen::VectorXd&       current_state,
                                        Eigen::MatrixXd&       P)
 {
-  Eigen::Vector3d zz;
-  Eigen::Vector6d z;
-  Eigen::Vector6d y;
+  Eigen::VectorXd zz;
+  Eigen::VectorXd z;
+  Eigen::VectorXd y;
 
   zz = E.transpose() * G;
   z << current_state(0), current_state(1), current_state(2), zz(0), zz(1), zz(2);
@@ -335,19 +341,19 @@ void EKFComponent::UpdateByObservation(const Eigen::Vector3d& position_from_gnss
 
   current_state = current_state + K * (y - z);
 
-  const Eigen::Matrix10d I = Eigen::MatrixXd::Identity(10, 10);
+  const Eigen::MatrixXd I = Eigen::MatrixXd::Identity(10, 10);
   P = (I - K * C) * P;
 }
 
-void EKFComponent::CalcPositionByEKF(const Eigen::Vector3d& acceleration,
-                                     const Eigen::Vector3d& gyro,
-                                     const Eigen::Vector3d& position_from_gnss)
+void EKFComponent::CalcPositionByEKF(const Eigen::VectorXd& acceleration,
+                                     const Eigen::VectorXd& gyro,
+                                     const Eigen::VectorXd& position_from_gnss)
 {
   if (!is_initialized_) {
     return; // 初期化が完了するまで更新をスキップ
   }
 
-  Eigen::Vector10d current_state = state_;
+  Eigen::VectorXd current_state = state_;
 
   // set past value to Matrix 
   Eigen::MatrixXd A = A_;
@@ -360,61 +366,75 @@ void EKFComponent::CalcPositionByEKF(const Eigen::Vector3d& acceleration,
   Eigen::MatrixXd S = S_;
   Eigen::MatrixXd K = K_;
 
-  UpdateByStateEq(current_state);
+  UpdateByStateEq(acceleration,
+                  gyro,
+                  current_state);
 
-  CalculateMatrix(current_state, A, B, C, M, Q, E, P, S, K);
+  CalculateMatrices(current_state, acceleration, gyro, A, B, C, M, Q, E, P, S, K);
 
   UpdateByObservation(position_from_gnss,
                       acceleration,
                       C, E, K,
                       current_state,
-                      P)
-
+                      P);
+  
   A_ = A; B_ = B; C_ = C; M_ = M; Q_ = Q; E_ = E; P_ = P; S_ = S; K_ = K; 
   state_ = current_state;
 
 
-    geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
-    if (receive_odom_) {
-      pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);
-    }
-    if (!receive_odom_) {
-      pose_ekf.header.stamp = std::max(gpstimestamp, imutimestamp);
-    }
-    pose_ekf.header.frame_id = map_frame_id_;
-    pose_ekf.pose.pose.position.x = x(0);
-    pose_ekf.pose.pose.position.y = x(1);
-    pose_ekf.pose.pose.position.z = x(2);
+  geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
+  if (receive_odom_) {
+    pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);
+  }
+  if (!receive_odom_) {
+    pose_ekf.header.stamp = std::max(gpstimestamp, imutimestamp);
+  }
+  pose_ekf.header.frame_id = map_frame_id_;
+  pose_ekf.pose.pose.position.x = state_(0);
+  pose_ekf.pose.pose.position.y = state_(1);
+  pose_ekf.pose.pose.position.z = state_(2);
 
-    pose_ekf.pose.pose.orientation.w =
-      x(3) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
-    pose_ekf.pose.pose.orientation.x =
-      x(4) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
-    pose_ekf.pose.pose.orientation.y =
-      x(5) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
-    pose_ekf.pose.pose.orientation.z =
-      x(6) / std::sqrt(x(3) * x(3) + x(4) * x(4) + x(5) * x(5) + x(6) * x(6));
+  pose_ekf.pose.pose.orientation.w =
+    state_(3) / std::sqrt(state_(3) * state_(3) + state_(4) * state_(4) + state_(5) * state_(5) + state_(6) * state_(6));
+  pose_ekf.pose.pose.orientation.x =
+    state_(4) / std::sqrt(state_(3) * state_(3) + state_(4) * state_(4) + state_(5) * state_(5) + state_(6) * state_(6));
+  pose_ekf.pose.pose.orientation.y =
+    state_(5) / std::sqrt(state_(3) * state_(3) + state_(4) * state_(4) + state_(5) * state_(5) + state_(6) * state_(6));
+  pose_ekf.pose.pose.orientation.z =
+    state_(6) / std::sqrt(state_(3) * state_(3) + state_(4) * state_(4) + state_(5) * state_(5) + state_(6) * state_(6));
 
-    //std::cout << "m" << std::endl;
-    pose_ekf.pose.covariance = {
-      P(0, 0), P(0, 1), P(0, 2), P(0, 7), P(0, 8), P(0, 9), P(1, 0), P(1, 1), P(1, 2),
-      P(1, 7), P(1, 8), P(1, 9), P(2, 0), P(2, 1), P(2, 2), P(2, 7), P(2, 8), P(2, 9),
-      P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
-      P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
+  //std::cout << "m" << std::endl;
+  pose_ekf.pose.covariance = {
+    P(0, 0), P(0, 1), P(0, 2), P(0, 7), P(0, 8), P(0, 9), P(1, 0), P(1, 1), P(1, 2),
+    P(1, 7), P(1, 8), P(1, 9), P(2, 0), P(2, 1), P(2, 2), P(2, 7), P(2, 8), P(2, 9),
+    P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9), P(8, 0), P(8, 1), P(8, 2),
+    P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1), P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
-    ekf_pose_publisher_->publish(pose_ekf);
-    if (broadcast_transform_) {
-      geometry_msgs::msg::TransformStamped transform_stamped;
-      transform_stamped.header.frame_id = map_frame_id_;
-      transform_stamped.header.stamp = pose_ekf.header.stamp;
-      transform_stamped.child_frame_id = robot_frame_id_;
-      transform_stamped.transform.translation.x = pose_ekf.pose.pose.position.x;
-      transform_stamped.transform.translation.y = pose_ekf.pose.pose.position.y;
-      transform_stamped.transform.translation.z = pose_ekf.pose.pose.position.z;
-      transform_stamped.transform.rotation = pose_ekf.pose.pose.orientation;
-      broadcaster_.sendTransform(transform_stamped);
-    }
+  ekf_pose_publisher_->publish(pose_ekf);
+  if (broadcast_transform_) {
+    geometry_msgs::msg::TransformStamped transform_stamped;
+    transform_stamped.header.frame_id = map_frame_id_;
+    transform_stamped.header.stamp = pose_ekf.header.stamp;
+    transform_stamped.child_frame_id = robot_frame_id_;
+    transform_stamped.transform.translation.x = pose_ekf.pose.pose.position.x;
+    transform_stamped.transform.translation.y = pose_ekf.pose.pose.position.y;
+    transform_stamped.transform.translation.z = pose_ekf.pose.pose.position.z;
+    transform_stamped.transform.rotation = pose_ekf.pose.pose.orientation;
+    broadcaster_.sendTransform(transform_stamped);
+  }
   
 }
+
+void EKFComponent::timer_callback() 
+{
+    // 加速度、ジャイロ、位置の例（実際にはセンサーからのデータを使用）
+    Eigen::VectorXd acceleration       = acceleration_;       // 実際の加速度データを取得
+    Eigen::VectorXd gyro               = gyro_;               // 実際のジャイロデータを取得
+    Eigen::VectorXd position_from_gnss = position_from_gnss_; // 実際の位置データを取得
+
+    // EKF計算の呼び出し
+    CalcPositionByEKF(acceleration, gyro, position_from_gnss);
+}
+
 }  // namespace robotx_ekf
 RCLCPP_COMPONENTS_REGISTER_NODE(robotx_ekf::EKFComponent)
