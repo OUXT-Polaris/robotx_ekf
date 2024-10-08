@@ -92,51 +92,76 @@ public:
   ROBOTX_EKF_EKF_COMPONENT_PUBLIC
   explicit EKFComponent(const rclcpp::NodeOptions & options);
 
-  bool initialized = false;
-  Eigen::MatrixXd P;
-  Eigen::VectorXd x;
-  Eigen::VectorXd y;
-  Eigen::VectorXd u;
-  Eigen::MatrixXd I;
-  Eigen::MatrixXd A;
-  Eigen::MatrixXd B;
-  Eigen::MatrixXd C;
-  Eigen::MatrixXd M;
-  Eigen::MatrixXd Q;
-  Eigen::MatrixXd K;
-  Eigen::MatrixXd S;
+private: 
+  Eigen::MatrixXd A_;
+  Eigen::MatrixXd B_;
+  Eigen::MatrixXd C_;
+  Eigen::MatrixXd M_;
+  Eigen::MatrixXd Q_;
+  Eigen::MatrixXd K_;
+  Eigen::MatrixXd S_;
+  Eigen::MatrixXd E_;
+  Eigen::MatrixXd P_;
   Eigen::VectorXd cov;
-
+  Eigen::MatrixXd I;
   Eigen::VectorXd G;
+  
+  bool is_initialized;
+  Eigen::Vector10d state_;
+  Eigen::Vector3d acceleration_;
+  Eigen::Vector3d gyro_;
+  Eigen::Vector3d position_from_gnss_;
 
-  Eigen::MatrixXd E;
-
-  Eigen::VectorXd a;
-  Eigen::VectorXd am;
-  Eigen::VectorXd z;
-
+  rclcpp::Time imutimestamp;
   rclcpp::Time odomtimestamp;
   rclcpp::Time gpstimestamp;
-  rclcpp::Time imutimestamp;
 
-private:
+
   bool receive_odom_;
-  double dt = 0.01;  // looprate
-  double k = 0.9;    // low pass filter
-
-  double eps = 0.1;   // prefilter
-  double g = 9.7967;  // gravity
+  const double dt = 0.01;  // looprate
+  
+  const double g = 9.7967;  // gravity
+  
+  void declare_parameters();
+  void initialize_matrices();
+  void setup_subscribers_and_publishers();
 
   void GPStopic_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-  void observation();
-  void prefilter();
-  void LPF();
-  void modelfunc();
-  void jacobi();
+
+  void StateEquation(const Eigen::Vector3d& acceleration,
+                     const Eigen::Vector3d& gyro,
+                     Eigen::Vector10d&      state);
+
+  void EKFComponent::CalculateJacobi(const Eigen::Vector10d& current_state,
+                                      const Eigen::Vector3d& acceleration,
+                                      const Eigen::Vector3d& gyro,
+                                     Eigen::MatrixXd&        A,
+                                     Eigen::MatrixXd&        B,
+                                     Eigen::MatrixXd&        C,
+                                     Eigen::MatrixXd&        M,
+                                     Eigen::MatrixXd&        Q,
+                                     Eigen::MatrixXd&        E,
+                                     Eigen::MatrixXd&        P,
+                                     Eigen::MatrixXd&        S,
+                                     Eigen::MatrixXd&        K);
   bool init();
-  void update();
+
+  void UpdateByObservation(const Eigen::Vector3d& position_from_gnss,
+                               const Eigen::Vector3d& acceleration,
+                               const Eigen::MatrixXd& C,
+                               const Eigen::MatrixXd& E,
+                               const Eigen::MatrixXd& K,
+                               Eigen::Vector3d&       current_state,
+                               Eigen::MatrixXd&       P)
+ 
+  void CalcPositionByEKF(const Eigen::Vector3d& acceleration,
+                         const Eigen::Vector3d& gyro,
+                         const Eigen::Vector3d& position_from_gnss);
+
+
+  
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     gps_pose_subscription_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
