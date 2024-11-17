@@ -61,6 +61,7 @@ extern "C" {
 #include <rclcpp/rclcpp.hpp>
 
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
@@ -121,9 +122,14 @@ private:
   void initialize_matrices();
   void setup_subscribers_and_publishers();
 
-  void GPStopic_callback(
+  void GPStopic_covariance_callback(
       const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+
+  void GPStopic_callback(
+      const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
   void UpdateByStateEq(const Eigen::VectorXd &acceleration,
@@ -144,6 +150,11 @@ private:
                            const Eigen::MatrixXd &K,
                            Eigen::VectorXd &current_state, Eigen::MatrixXd &P);
 
+  void publish_topic_covariance(const Eigen::VectorXd &state,
+                                 const Eigen::MatrixXd &P);
+  
+  void publish_topic(const Eigen::VectorXd &state);
+
   void CalcPositionByEKF(const Eigen::VectorXd &acceleration,
                          const Eigen::VectorXd &gyro,
                          const Eigen::VectorXd &position_from_gnss);
@@ -151,10 +162,14 @@ private:
   void timer_callback();
 
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+      gps_pose_with_covariance_subscription_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
       gps_pose_subscription_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+      ekf_pose_with_covariance_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
       ekf_pose_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::TransformBroadcaster broadcaster_;
@@ -162,6 +177,7 @@ private:
   std::string robot_frame_id_;
   std::string map_frame_id_;
   PoseCovariance covariance;
+  bool topic_covariance_;
 };
 } // namespace robotx_ekf
 

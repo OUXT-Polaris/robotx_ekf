@@ -10,19 +10,20 @@
     </composable_node>
 
     <!-- Use rsasaki0109/kalman_filter_localization pacakge for debugging -->
-    <!-- <composable_node pkg="robotx_ekf" plugin="robotx_ekf::EKFComponent" name="ekf_component" namespace="localization">
+    <composable_node pkg="robotx_ekf" plugin="robotx_ekf::EKFComponent" name="ekf_component" namespace="localization">
       <param name="use_sim_time" value="$(var use_sim_time)"/>
       <param name="use_intra_process_comms" value="true"/>
       <param name="robot_frame_id" value="wamv/wamv/base_link"/>
-    </composable_node> -->
+      <param name="topic_covariance" value="false"/>
+    </composable_node>
 
     <!-- Use rsasaki0109/kalman_filter_localization pacakge for debugging -->
-    <composable_node pkg="kalman_filter_localization" plugin="kalman_filter_localization::EkfLocalizationComponent" name="ekf_component" namespace="localization">
+    <!-- <composable_node pkg="kalman_filter_localization" plugin="kalman_filter_localization::EkfLocalizationComponent" name="ekf_component" namespace="localization">
       <param name="use_sim_time" value="$(var use_sim_time)"/>
       <param name="use_intra_process_comms" value="true"/>
       <param from="$(find-pkg-share robotx_ekf)/config/kalman_filter_localization.yaml"/>
       <remap from="/localization/ekf_component/current_pose" to="/current_pose"/>
-    </composable_node>
+    </composable_node> -->
 
     <!-- <composable_node pkg="odom_frame_publisher" plugin="odom_frame_publisher::OdomFramePublisherComponent" name="odom_frame_publisher" namespace="localization">
       <param name="use_sim_time" value="$(var use_sim_time)"/>
