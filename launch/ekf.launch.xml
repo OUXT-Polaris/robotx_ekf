@@ -24,12 +24,13 @@
       <remap from="/localization/ekf_component/current_pose" to="/current_pose"/>
     </composable_node>
 
-    <composable_node pkg="odom_frame_publisher" plugin="odom_frame_publisher::OdomFramePublisherComponent" name="odom_frame_publisher" namespace="localization">
+    <!-- <composable_node pkg="odom_frame_publisher" plugin="odom_frame_publisher::OdomFramePublisherComponent" name="odom_frame_publisher" namespace="localization">
       <param name="use_sim_time" value="$(var use_sim_time)"/>
       <param name="use_intra_process_comms" value="true"/>
+      <param name="robot_frame_id" value="wamv/wamv/base_link"/>
       <remap from="/localization/current_pose" to="/current_pose"/>
       <remap from="/localization/current_twist" to="/current_twist"/>
-    </composable_node>
+    </composable_node> -->
 
   </node_container>
 </launch>
