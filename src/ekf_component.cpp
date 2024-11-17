@@ -107,13 +107,13 @@ void EKFComponent::setup_subscribers_and_publishers() {
     if (topic_covariance_){
       gps_pose_with_covariance_subscription_ = this->create_subscription<
           geometry_msgs::msg::PoseWithCovarianceStamped>(
-          "/gps_pose", 10,
+          "gps_pose", 10,
           std::bind(&EKFComponent::GPStopic_covariance_callback, this,
                     std::placeholders::_1));
     }else{
       gps_pose_subscription_ = this->create_subscription<
           geometry_msgs::msg::PoseStamped>(
-          "/gps_pose", 10,
+          "gps_pose", 10,
           std::bind(&EKFComponent::GPStopic_callback, this,
                     std::placeholders::_1));
     }
@@ -123,7 +123,7 @@ void EKFComponent::setup_subscribers_and_publishers() {
 
   // IMUデータのサブスクリプション
   imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "/imu", 10,
+      "imu", 10,
       std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
   // EKFの推定結果をパブリッシュ
@@ -417,10 +417,16 @@ void EKFComponent::UpdateByObservation(
 }
 
 
-void EKFComponent::publish_topic_covariance(const Eigen::VectorXd &state,
-                                              const Eigen::MatrixXd &P) {
+void EKFComponent::publish_topic_covariance(const Eigen::VectorXd &current_state,
+                                              const Eigen::MatrixXd &Pin) {
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
-    
+
+  Eigen::VectorXd state(10);
+  state << current_state;
+
+  Eigen::MatrixXd P(10,10);
+  P << Pin;
+
   if (receive_odom_) {
     pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);
   }
@@ -469,8 +475,11 @@ void EKFComponent::publish_topic_covariance(const Eigen::VectorXd &state,
   }
 }
 
-void EKFComponent::publish_topic(const Eigen::VectorXd &state) {
+void EKFComponent::publish_topic(const Eigen::VectorXd &current_state) {
   geometry_msgs::msg::PoseStamped pose_ekf;
+
+  Eigen::VectorXd state(10);
+  state << current_state;
     
   if (receive_odom_) {
     pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);

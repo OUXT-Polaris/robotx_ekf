@@ -150,10 +150,10 @@ private:
                            const Eigen::MatrixXd &K,
                            Eigen::VectorXd &current_state, Eigen::MatrixXd &P);
 
-  void publish_topic_covariance(const Eigen::VectorXd &state,
-                                 const Eigen::MatrixXd &P);
+  void publish_topic_covariance(const Eigen::VectorXd &current_state,
+                                 const Eigen::MatrixXd &Pin);
   
-  void publish_topic(const Eigen::VectorXd &state);
+  void publish_topic(const Eigen::VectorXd &current_state);
 
   void CalcPositionByEKF(const Eigen::VectorXd &acceleration,
                          const Eigen::VectorXd &gyro,
