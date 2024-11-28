@@ -395,9 +395,10 @@ void EKFComponent::UpdateByObservation(
     const Eigen::VectorXd &acceleration, const Eigen::MatrixXd &C,
     const Eigen::MatrixXd &E, const Eigen::MatrixXd &K,
     Eigen::VectorXd &current_state, Eigen::MatrixXd &P) {
-  Eigen::VectorXd zz;
-  Eigen::VectorXd z;
-  Eigen::VectorXd y;
+
+  Eigen::VectorXd zz(3);
+  Eigen::VectorXd z(6);
+  Eigen::VectorXd y(6);
 
   zz = E.transpose() * G;
   z << current_state(0), current_state(1), current_state(2), zz(0), zz(1),
@@ -528,7 +529,8 @@ void EKFComponent::CalcPositionByEKF(
     return; // 初期化が完了するまで更新をスキップ
   }
 
-  Eigen::VectorXd current_state = state_;
+  Eigen::VectorXd current_state(9);
+  current_state = state_;
 
   // set past value to Matrix
   Eigen::MatrixXd A = A_;
