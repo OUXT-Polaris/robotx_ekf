@@ -51,7 +51,7 @@ extern "C" {
 #endif
 
 #if __cplusplus
-} // extern "C"
+}  // extern "C"
 #endif
 
 #include <tf2_ros/transform_broadcaster.h>
@@ -65,29 +65,34 @@ extern "C" {
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
-namespace robotx_ekf {
-struct PositionCovariance {
+namespace robotx_ekf
+{
+struct PositionCovariance
+{
   double x = 0;
   double y = 0;
   double z = 0;
 };
 
-struct OrientationCovariance {
+struct OrientationCovariance
+{
   double x = 0;
   double y = 0;
   double z = 0;
   double w = 0;
 };
 
-struct PoseCovariance {
+struct PoseCovariance
+{
   PositionCovariance position_covariance;
   OrientationCovariance orientation_covariance;
 };
 
-class EKFComponent : public rclcpp::Node {
+class EKFComponent : public rclcpp::Node
+{
 public:
   ROBOTX_EKF_EKF_COMPONENT_PUBLIC
-  explicit EKFComponent(const rclcpp::NodeOptions &options);
+  explicit EKFComponent(const rclcpp::NodeOptions & options);
 
 private:
   Eigen::MatrixXd A_;
@@ -114,16 +119,16 @@ private:
   rclcpp::Time gpstimestamp;
 
   bool receive_odom_;
-  const double dt = 0.01; // looprate
+  const double dt = 0.01;  // looprate
 
-  const double g = 9.7967; // gravity
+  const double g = 9.7967;  // gravity
 
   void declare_parameters();
   void initialize_matrices();
   void setup_subscribers_and_publishers();
 
   void GPStopic_covariance_callback(
-      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+    const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
   void GPStopic_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
@@ -131,45 +136,39 @@ private:
 
   void IMUtopic_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
-  void UpdateByStateEq(const Eigen::VectorXd &acceleration,
-                       const Eigen::VectorXd &gyro,
-                       Eigen::VectorXd &current_state);
+  void UpdateByStateEq(
+    const Eigen::VectorXd & acceleration, const Eigen::VectorXd & gyro,
+    Eigen::VectorXd & current_state);
 
-  void CalculateMatrices(const Eigen::VectorXd &current_state,
-                         const Eigen::VectorXd &acceleration,
-                         const Eigen::VectorXd &gyro, Eigen::MatrixXd &A,
-                         Eigen::MatrixXd &B, Eigen::MatrixXd &C,
-                         Eigen::MatrixXd &M, Eigen::MatrixXd &Q,
-                         Eigen::MatrixXd &E, Eigen::MatrixXd &P,
-                         Eigen::MatrixXd &S, Eigen::MatrixXd &K);
+  void CalculateMatrices(
+    const Eigen::VectorXd & current_state, const Eigen::VectorXd & acceleration,
+    const Eigen::VectorXd & gyro, Eigen::MatrixXd & A, Eigen::MatrixXd & B, Eigen::MatrixXd & C,
+    Eigen::MatrixXd & M, Eigen::MatrixXd & Q, Eigen::MatrixXd & E, Eigen::MatrixXd & P,
+    Eigen::MatrixXd & S, Eigen::MatrixXd & K);
 
-  void UpdateByObservation(const Eigen::VectorXd &position_from_gnss,
-                           const Eigen::VectorXd &acceleration,
-                           const Eigen::MatrixXd &C, const Eigen::MatrixXd &E,
-                           const Eigen::MatrixXd &K,
-                           Eigen::VectorXd &current_state, Eigen::MatrixXd &P);
+  void UpdateByObservation(
+    const Eigen::VectorXd & position_from_gnss, const Eigen::VectorXd & acceleration,
+    const Eigen::MatrixXd & C, const Eigen::MatrixXd & E, const Eigen::MatrixXd & K,
+    Eigen::VectorXd & current_state, Eigen::MatrixXd & P);
 
-  void publish_topic_covariance(const Eigen::VectorXd &current_state,
-                                const Eigen::MatrixXd &Pin);
+  void publish_topic_covariance(const Eigen::VectorXd & current_state, const Eigen::MatrixXd & Pin);
 
-  void publish_topic(const Eigen::VectorXd &current_state);
+  void publish_topic(const Eigen::VectorXd & current_state);
 
-  void CalcPositionByEKF(const Eigen::VectorXd &acceleration,
-                         const Eigen::VectorXd &gyro,
-                         const Eigen::VectorXd &position_from_gnss);
+  void CalcPositionByEKF(
+    const Eigen::VectorXd & acceleration, const Eigen::VectorXd & gyro,
+    const Eigen::VectorXd & position_from_gnss);
 
   void timer_callback();
 
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-      gps_pose_with_covariance_subscription_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
-      gps_pose_subscription_;
+    gps_pose_with_covariance_subscription_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr gps_pose_subscription_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-      ekf_pose_with_covariance_publisher_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
-      ekf_pose_publisher_;
+    ekf_pose_with_covariance_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ekf_pose_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::TransformBroadcaster broadcaster_;
   bool broadcast_transform_;
@@ -178,6 +177,6 @@ private:
   PoseCovariance covariance;
   bool topic_covariance_;
 };
-} // namespace robotx_ekf
+}  // namespace robotx_ekf
 
-#endif // ROBOTX_EKF__EKF_COMPONENT_HPP_
+#endif  // ROBOTX_EKF__EKF_COMPONENT_HPP_

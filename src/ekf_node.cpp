@@ -16,7 +16,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <robotx_ekf/ekf_component.hpp>
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[])
+{
   rclcpp::init(argc, argv);
   rclcpp::NodeOptions options;
   auto component = std::make_shared<robotx_ekf::EKFComponent>(options);
