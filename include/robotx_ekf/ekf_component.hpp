@@ -60,8 +60,8 @@ extern "C" {
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
@@ -125,8 +125,7 @@ private:
   void GPStopic_covariance_callback(
       const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
-  void GPStopic_callback(
-      const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+  void GPStopic_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
   void Odomtopic_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
@@ -151,8 +150,8 @@ private:
                            Eigen::VectorXd &current_state, Eigen::MatrixXd &P);
 
   void publish_topic_covariance(const Eigen::VectorXd &current_state,
-                                 const Eigen::MatrixXd &Pin);
-  
+                                const Eigen::MatrixXd &Pin);
+
   void publish_topic(const Eigen::VectorXd &current_state);
 
   void CalcPositionByEKF(const Eigen::VectorXd &acceleration,

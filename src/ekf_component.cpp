@@ -104,18 +104,18 @@ void EKFComponent::setup_subscribers_and_publishers() {
                   std::placeholders::_1));
     RCLCPP_INFO(this->get_logger(), "Using topic /odom for observation");
   } else {
-    if (topic_covariance_){
+    if (topic_covariance_) {
       gps_pose_with_covariance_subscription_ = this->create_subscription<
           geometry_msgs::msg::PoseWithCovarianceStamped>(
           "gps_pose", 10,
           std::bind(&EKFComponent::GPStopic_covariance_callback, this,
                     std::placeholders::_1));
-    }else{
-      gps_pose_subscription_ = this->create_subscription<
-          geometry_msgs::msg::PoseStamped>(
-          "gps_pose", 10,
-          std::bind(&EKFComponent::GPStopic_callback, this,
-                    std::placeholders::_1));
+    } else {
+      gps_pose_subscription_ =
+          this->create_subscription<geometry_msgs::msg::PoseStamped>(
+              "gps_pose", 10,
+              std::bind(&EKFComponent::GPStopic_callback, this,
+                        std::placeholders::_1));
     }
 
     RCLCPP_INFO(this->get_logger(), "Using topic gps_pose for observation");
@@ -127,17 +127,16 @@ void EKFComponent::setup_subscribers_and_publishers() {
       std::bind(&EKFComponent::IMUtopic_callback, this, std::placeholders::_1));
 
   // EKFの推定結果をパブリッシュ
-  if (topic_covariance_){
+  if (topic_covariance_) {
     ekf_pose_with_covariance_publisher_ =
         this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
             "/current_pose", 10);
-  }else{
+  } else {
     ekf_pose_publisher_ =
-        this->create_publisher<geometry_msgs::msg::PoseStamped>(
-            "/current_pose", 10);
+        this->create_publisher<geometry_msgs::msg::PoseStamped>("/current_pose",
+                                                                10);
   }
 }
-
 
 // put position from GNSS sensor
 void EKFComponent::GPStopic_covariance_callback(
@@ -183,7 +182,6 @@ void EKFComponent::GPStopic_covariance_callback(
   }
 }
 
-
 // put position from GNSS sensor
 void EKFComponent::GPStopic_callback(
     const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
@@ -222,8 +220,6 @@ void EKFComponent::GPStopic_callback(
     is_initialized_ = true; // 初期化が完了したことを示す
   }
 }
-
-
 
 void EKFComponent::Odomtopic_callback(nav_msgs::msg::Odometry::SharedPtr msg) {
   odomtimestamp = msg->header.stamp;
@@ -357,21 +353,20 @@ void EKFComponent::CalculateMatrices(const Eigen::VectorXd &current_state,
   M << M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0,
       10 * M_x, 0, 0, 0, 0, 0, 0, 10 * M_x, 0, 0, 0, 0, 0, 0, 10 * M_x;
 
-
   const double Q_x = 3;
   Q << Q_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x,
       0, 0, 0, 0, 0, 0, M_x, 0, 0, 0, 0, 0, 0, M_x;
 
   // if you have GPS covariance, you can use here.
-  if (topic_covariance_){
+  if (topic_covariance_) {
     Q << cov(0), cov(1), cov(2), 0, 0, 0, 0, cov(3), cov(4), cov(5), cov(6),
-    cov(7), cov(8), 0, 0, 0,
-    0, cov(9), cov(10), cov(11), cov(12), cov(13), cov(14), 0, 0, 0, 0,
-    cov(15), cov(16), cov(17), 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    0, cov(18), cov(19), cov(20), 0, 0, 0, 0, cov(21), cov(22), cov(23),
-    cov(24), cov(25), cov(26), 0, 0, 0, 0, cov(27), cov(28), cov(29),
-    cov(30), cov(31), cov(32), 0, 0, 0, 0, cov(33), cov(34), cov(35);
+        cov(7), cov(8), 0, 0, 0, 0, cov(9), cov(10), cov(11), cov(12), cov(13),
+        cov(14), 0, 0, 0, 0, cov(15), cov(16), cov(17), 0, 0, 0, 1, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, cov(18), cov(19), cov(20), 0, 0, 0, 0, cov(21),
+        cov(22), cov(23), cov(24), cov(25), cov(26), 0, 0, 0, 0, cov(27),
+        cov(28), cov(29), cov(30), cov(31), cov(32), 0, 0, 0, 0, cov(33),
+        cov(34), cov(35);
   }
 
   // frame_base -> Inertial_base
@@ -417,15 +412,14 @@ void EKFComponent::UpdateByObservation(
   P = (I - K * C) * P;
 }
 
-
-void EKFComponent::publish_topic_covariance(const Eigen::VectorXd &current_state,
-                                              const Eigen::MatrixXd &Pin) {
+void EKFComponent::publish_topic_covariance(
+    const Eigen::VectorXd &current_state, const Eigen::MatrixXd &Pin) {
   geometry_msgs::msg::PoseWithCovarianceStamped pose_ekf;
 
   Eigen::VectorXd state(10);
   state << current_state;
 
-  Eigen::MatrixXd P(10,10);
+  Eigen::MatrixXd P(10, 10);
   P << Pin;
 
   if (receive_odom_) {
@@ -435,35 +429,34 @@ void EKFComponent::publish_topic_covariance(const Eigen::VectorXd &current_state
     pose_ekf.header.stamp = std::max(gpstimestamp, imutimestamp);
   }
 
-    pose_ekf.header.frame_id = map_frame_id_;
-    pose_ekf.pose.pose.position.x = state(0);
-    pose_ekf.pose.pose.position.y = state(1);
-    pose_ekf.pose.pose.position.z = state(2);
+  pose_ekf.header.frame_id = map_frame_id_;
+  pose_ekf.pose.pose.position.x = state(0);
+  pose_ekf.pose.pose.position.y = state(1);
+  pose_ekf.pose.pose.position.z = state(2);
 
-    pose_ekf.pose.pose.orientation.w =
-        state(3) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-    pose_ekf.pose.pose.orientation.x =
-        state(4) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-    pose_ekf.pose.pose.orientation.y =
-        state(5) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-    pose_ekf.pose.pose.orientation.z =
-        state(6) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.pose.orientation.w =
+      state(3) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.pose.orientation.x =
+      state(4) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.pose.orientation.y =
+      state(5) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.pose.orientation.z =
+      state(6) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
 
-    pose_ekf.pose.covariance = {
+  pose_ekf.pose.covariance = {
       P(0, 0), P(0, 1), P(0, 2), P(0, 7), P(0, 8), P(0, 9), P(1, 0), P(1, 1),
       P(1, 2), P(1, 7), P(1, 8), P(1, 9), P(2, 0), P(2, 1), P(2, 2), P(2, 7),
       P(2, 8), P(2, 9), P(7, 0), P(7, 1), P(7, 2), P(7, 7), P(7, 8), P(7, 9),
       P(8, 0), P(8, 1), P(8, 2), P(8, 7), P(8, 8), P(8, 9), P(9, 0), P(9, 1),
       P(9, 2), P(9, 7), P(9, 8), P(9, 9)};
 
-   
   ekf_pose_with_covariance_publisher_->publish(pose_ekf);
-  
-  if (broadcast_transform_){
+
+  if (broadcast_transform_) {
     geometry_msgs::msg::TransformStamped transform_stamped;
     transform_stamped.header.frame_id = map_frame_id_;
     transform_stamped.header.stamp = pose_ekf.header.stamp;
@@ -481,7 +474,7 @@ void EKFComponent::publish_topic(const Eigen::VectorXd &current_state) {
 
   Eigen::VectorXd state(10);
   state << current_state;
-    
+
   if (receive_odom_) {
     pose_ekf.header.stamp = std::max(odomtimestamp, imutimestamp);
   }
@@ -489,27 +482,27 @@ void EKFComponent::publish_topic(const Eigen::VectorXd &current_state) {
     pose_ekf.header.stamp = std::max(gpstimestamp, imutimestamp);
   }
 
-    pose_ekf.header.frame_id = map_frame_id_;
-    pose_ekf.pose.position.x = state(0);
-    pose_ekf.pose.position.y = state(1);
-    pose_ekf.pose.position.z = state(2);
+  pose_ekf.header.frame_id = map_frame_id_;
+  pose_ekf.pose.position.x = state(0);
+  pose_ekf.pose.position.y = state(1);
+  pose_ekf.pose.position.z = state(2);
 
-    pose_ekf.pose.orientation.w =
-        state(3) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-    pose_ekf.pose.orientation.x =
-        state(4) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-    pose_ekf.pose.orientation.y =
-        state(5) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-    pose_ekf.pose.orientation.z =
-        state(6) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
-                              state(5) * state(5) + state(6) * state(6));
-   
+  pose_ekf.pose.orientation.w =
+      state(3) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.orientation.x =
+      state(4) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.orientation.y =
+      state(5) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+  pose_ekf.pose.orientation.z =
+      state(6) / std::sqrt(state(3) * state(3) + state(4) * state(4) +
+                           state(5) * state(5) + state(6) * state(6));
+
   ekf_pose_publisher_->publish(pose_ekf);
-  
-  if (broadcast_transform_){
+
+  if (broadcast_transform_) {
     geometry_msgs::msg::TransformStamped transform_stamped;
     transform_stamped.header.frame_id = map_frame_id_;
     transform_stamped.header.stamp = pose_ekf.header.stamp;
@@ -562,14 +555,12 @@ void EKFComponent::CalcPositionByEKF(
   K_ = K;
   state_ = current_state;
 
-  if (topic_covariance_){
+  if (topic_covariance_) {
     publish_topic_covariance(current_state, P);
   } else {
     publish_topic(current_state);
   }
 }
-
-
 
 void EKFComponent::timer_callback() {
   // 加速度、ジャイロ、位置の例（実際にはセンサーからのデータを使用）
